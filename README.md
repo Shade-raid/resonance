@@ -34,13 +34,17 @@ X: Mute Audio
 The Entities
 
 The Chorus (C): Blind, screaming miners with unhinged jaws. They hunt purely by sound. Throw an Audio Tape to distract them.
+
 The Surveyor (S): Pale, lobotomized scientists in lead-lined coats. They ignore sound, patrolling mathematically. If they catch you, they will pin you down and surgically disassemble you.
+
 The Attuned (A): Cable and bone grown together. Slow, but feels your vibration through the floor. Guards the Core.
 
 Technical Details
 
 100% Vanilla ES6. No frameworks, no libraries, no dependencies.
+
 Single HTML File. The entire game—engine, UI, audio synthesis, map generation, and combat logic—lives in one file. Just open it in a browser.
+
 WebAudio API: All sound effects (the heartbeat thumps, the alarm blares, the interface ticks) are synthesized procedurally in real-time. No audio assets are loaded.
 
 Lore Premise
