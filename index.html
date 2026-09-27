@@ -1,0 +1,2680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RESONANCE // neural interface</title>
+<style>
+:root{
+  --bg:#000000;
+  --fg:#72f6ff;
+  --dim:#6a7a8a;
+  --red:#ff4477;
+  --panel:#0a0a0a;
+  --violet:#b88cff;
+  --ink:#000000;
+  --bevel-hi:#3d3d3d;
+  --bevel-lo:#0c0c0c;
+  --bevel-hi2:#4a4a4a;
+  --grid-line:#1c1c1c;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{
+  background:#000;
+  display:flex;align-items:center;justify-content:center;
+  font-family:"Cascadia Mono","Consolas","Lucida Console","Courier New",monospace;
+  color:var(--fg);
+  overflow:hidden;
+}
+
+/* ====== 90s CONSOLE SHELL ====== */
+#crt{
+  position:relative;background:#000;
+  border:4px solid #2a2a2a;border-radius:4px;padding:18px 22px;
+  box-shadow:inset 0 0 0 3px #050505,inset 0 0 42px rgba(114,246,255,.06),
+             0 4px 0 #050505,0 8px 0 #0a0a0a,0 12px 0 #050505,0 30px 60px rgba(0,0,0,.9);
+  overflow:hidden;
+}
+#app{position:relative;z-index:2}
+#app.tremor #grid{animation:tremor .09s linear infinite}
+@keyframes tremor{
+  0%{transform:translate(0,0)}
+  25%{transform:translate(.6px,-.4px)}
+  50%{transform:translate(-.5px,.5px)}
+  75%{transform:translate(.4px,.4px)}
+  100%{transform:translate(0,0)}
+}
+
+header{
+  display:flex;justify-content:space-between;align-items:baseline;
+  color:var(--dim);font-size:13px;letter-spacing:2px;
+  border-bottom:2px solid #2a2a2a;padding-bottom:7px;margin-bottom:10px;
+  text-shadow:1px 1px 0 #000;
+}
+header .ht{color:#fff38a;text-shadow:2px 2px 0 #5a3a10}
+
+/* ====== GRID LAYOUT ====== */
+#grid{display:grid;grid-template-columns:auto 378px;grid-template-rows:auto 212px;gap:10px}
+.panel{
+  border:2px solid #2a2a2a;background:#000;
+  padding:8px 10px;position:relative;
+  box-shadow:inset 1px 1px 0 #4a4a4a,inset -1px -1px 0 #050505,
+             inset 2px 2px 0 #2a2a2a,inset -2px -2px 0 #0a0a0a;
+}
+.ptitle{color:#fff38a;font-size:11px;letter-spacing:3px;margin-bottom:6px;text-shadow:1px 1px 0 #3a2a05}
+#mapwrap{grid-column:1;grid-row:1}
+#statuswrap{grid-column:2;grid-row:1}
+#logpanel{grid-column:1/3;grid-row:2;display:flex;flex-direction:column}
+
+/* ====== MAP ====== */
+#map{
+  font-size:15px;line-height:1.16;white-space:pre;
+  text-shadow:1px 1px 0 #000;
+  min-width:436px;
+}
+.legend{margin-top:6px;color:var(--dim);font-size:11px;line-height:1.55}
+.m  {opacity:.4}
+.p  {color:#fff38a;text-shadow:2px 2px 0 #4a2a05;font-weight:bold}
+.e  {color:#b88cff;text-shadow:1px 1px 0 #000}
+.ho {color:var(--red);text-shadow:2px 2px 0 #2a0010;font-weight:bold;animation:blink .6s steps(2) infinite}
+.w  {color:#888888;text-shadow:1px 1px 0 #000}
+.fl {color:#2a2a2a}
+.dr {color:var(--fg)}
+.it {color:#fff38a;text-shadow:1px 1px 0 #3a2a05}
+.an {color:#b88cff;text-shadow:1px 1px 0 #000;animation:anom 1.6s ease-in-out infinite}
+.anc{color:#fff38a;font-weight:bold;animation:anom .9s ease-in-out infinite;text-shadow:2px 2px 0 #3a2a05}
+@keyframes anom{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* ====== STATUS PANE ====== */
+.srow{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;margin-top:4px}
+.slabel{color:var(--dim);letter-spacing:1px}
+.sval{color:var(--fg);text-shadow:0 0 6px rgba(114,246,255,.5)}
+.sval.r{color:var(--red);text-shadow:0 0 7px rgba(255,68,119,.7)}
+#specbar{
+  position:relative;height:14px;margin:4px 0 2px;
+  border:1px solid #2a2a2a;
+  background:repeating-linear-gradient(90deg,#1a1a1a 0 4px,#000 4px 8px);
+  box-shadow:inset 1px 1px 0 #050505,inset -1px -1px 0 #3a3a3a;
+}
+#specmark{
+  position:absolute;top:-3px;transform:translateX(-50%);
+  color:var(--fg);text-shadow:0 0 9px var(--fg);font-size:15px;
+  transition:left .35s ease;
+}
+.speclabels{display:flex;justify-content:space-between;color:var(--dim);font-size:10px;letter-spacing:2px;margin-bottom:4px}
+.bar{height:10px;border:1px solid #2a2a2a;margin:3px 0 8px;background:#000;
+     box-shadow:inset 1px 1px 0 #050505,inset -1px -1px 0 #3a3a3a}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--fg),#b88cff);box-shadow:none;transition:width .25s}
+#limbs{margin-top:2px}
+.limb{display:grid;grid-template-columns:56px 128px 1fr;font-size:13px;line-height:1.55;align-items:baseline}
+.lname{color:var(--dim)}
+.lbar{letter-spacing:1px}
+.lb-ok{color:var(--fg);text-shadow:0 0 5px rgba(114,246,255,.5)}
+.lb-bad{color:var(--red);text-shadow:0 0 6px rgba(255,68,119,.6)}
+.st-ok{color:#3aff3a}
+.st-bl{color:var(--red);animation:blink 1s steps(2) infinite}
+.st-fr{color:#ff9900}
+.st-am{color:var(--red);font-weight:bold;text-shadow:0 0 8px rgba(255,68,119,.8)}
+@keyframes blink{50%{opacity:.25}}
+#equip{margin-top:8px;color:var(--dim);font-size:12px;line-height:1.5;letter-spacing:1px;white-space:normal;word-break:break-word;}
+
+/* ====== LOG ====== */
+#log{flex:1;overflow-y:auto;padding-right:6px;font-size:12.5px;line-height:1.5}
+#log::-webkit-scrollbar{width:8px}
+#log::-webkit-scrollbar-track{background:#000;box-shadow:inset 1px 0 0 #1a1a1a}
+#log::-webkit-scrollbar-thumb{background:#3a3a3a;border:1px solid #1a1a1a}
+.ln{white-space:pre-wrap}
+.ln .tn{color:#3a3a3a}
+.ln.dim,.ln.atm{color:var(--dim)}
+.ln.sys{color:#3aff3a;text-shadow:0 0 5px rgba(58,255,58,.4)}
+.ln.audio{color:#22b322}
+.ln.good{color:var(--fg);text-shadow:0 0 6px rgba(114,246,255,.5)}
+.ln.alert{color:var(--red);text-shadow:0 0 7px rgba(255,68,119,.5)}
+
+/* ====== CRISIS / END OVERLAY ====== */
+#overlay{
+  position:absolute;inset:0;z-index:60;display:none;
+  align-items:center;justify-content:center;
+  background:rgba(0,0,0,.85);
+}
+#overlay.on{display:flex}
+#modal{
+  border:2px solid var(--red);background:#000;
+  padding:24px 36px;min-width:470px;text-align:center;
+  box-shadow:0 0 50px rgba(255,68,119,.22),
+             inset 1px 1px 0 #4a4a4a,inset -1px -1px 0 #050505,
+             inset 2px 2px 0 #2a2a2a,inset -2px -2px 0 #0a0a0a;
+}
+#modal.calm{
+  border-color:var(--fg);
+  box-shadow:0 0 50px rgba(114,246,255,.18),
+             inset 1px 1px 0 #4a4a4a,inset -1px -1px 0 #050505,
+             inset 2px 2px 0 #2a2a2a,inset -2px -2px 0 #0a0a0a;
+}
+#mtitle{font-size:21px;letter-spacing:3px;color:var(--red);text-shadow:0 0 10px rgba(255,68,119,.8);margin-bottom:12px}
+#modal.calm #mtitle{color:var(--fg);text-shadow:0 0 10px rgba(114,246,255,.8)}
+#mtitle.alarm{animation:blink .45s steps(2) infinite}
+#cbar{height:12px;border:1px solid #2a2a2a;margin:10px 0 14px;background:#1a0508;
+      box-shadow:inset 1px 1px 0 #050505,inset -1px -1px 0 #3a3a3a}
+#cbar i{display:block;height:100%;background:var(--red);box-shadow:0 0 10px rgba(255,68,119,.8);width:100%}
+#mbody{font-size:17px;letter-spacing:2px;min-height:48px;line-height:1.7}
+#mhint{color:var(--dim);font-size:12px;margin-top:8px;letter-spacing:1px}
+#modal.combat{border-color:var(--fg);min-width:640px;max-width:760px;text-align:left;
+              box-shadow:0 0 50px rgba(114,246,255,.16),
+              inset 1px 1px 0 #4a4a4a,inset -1px -1px 0 #050505,
+              inset 2px 2px 0 #2a2a2a,inset -2px -2px 0 #0a0a0a}
+#modal.combat #mtitle{text-align:left;letter-spacing:2px}
+#mbody.combatbody{white-space:pre;text-align:left;font-size:13px;letter-spacing:0;line-height:1.5;min-height:0}
+.lit{color:var(--fg);text-shadow:0 0 8px var(--fg)}
+.unlit{color:var(--dim)}
+
+/* ====== BOOT ====== */
+#boot{position:absolute;inset:0;z-index:70;background:#000;padding:36px;overflow-y:auto}
+#boottxt{font-size:14px;line-height:1.6;white-space:pre-wrap;color:var(--fg);text-shadow:0 0 5px rgba(114,246,255,.4)}
+
+/* ====== SPLASH ====== */
+#splash{position:absolute;inset:0;z-index:80;background:#000;display:flex;align-items:center;justify-content:center}
+#splashinner{text-align:center}
+#splashmark{font-size:20px;color:var(--dim);margin-bottom:14px;text-shadow:0 0 8px rgba(114,246,255,.4)}
+#splashlogo{font-size:32px;letter-spacing:7px;color:var(--fg);text-shadow:0 0 18px rgba(114,246,255,.85),0 0 44px rgba(114,246,255,.35);animation:splashflick 4.5s infinite steps(1)}
+#splashsub{margin-top:12px;font-size:11px;letter-spacing:8px;color:var(--dim)}
+#splashprompt{margin-top:42px;font-size:12px;letter-spacing:3px;color:var(--dim);animation:blink 1.1s steps(2) infinite}
+@keyframes splashflick{0%,100%{opacity:1}92%{opacity:1}93%{opacity:.25}94%{opacity:1}97%{opacity:1}98%{opacity:.45}99%{opacity:1}}
+
+/* Bright, beveled 16-bit panels on pure black; deliberately no scanlines, curvature, or flicker. */
+#boot,#splash{background:#000}
+#boot{border:2px solid #2a2a2a;box-shadow:inset 1px 1px 0 #4a4a4a,inset -1px -1px 0 #050505,inset 2px 2px 0 #2a2a2a,inset -2px -2px 0 #0a0a0a}
+#boottxt{color:var(--fg);text-shadow:1px 1px 0 #000}
+#splashlogo{color:#fff38a;text-shadow:3px 3px 0 #5a3a10,0 0 18px rgba(255,243,138,.4);animation:none}
+#splashmark,#splashsub,#splashprompt{color:var(--violet)}
+#overlay{background:rgba(0,0,0,.86)}
+#modal{border-color:var(--red);background:#000;
+       box-shadow:0 0 50px rgba(255,68,119,.25),
+       inset 1px 1px 0 #4a4a4a,inset -1px -1px 0 #050505,
+       inset 2px 2px 0 #2a2a2a,inset -2px -2px 0 #0a0a0a}
+#modal.calm,#modal.combat{border-color:var(--fg);
+       box-shadow:0 0 50px rgba(114,246,255,.18),
+       inset 1px 1px 0 #4a4a4a,inset -1px -1px 0 #050505,
+       inset 2px 2px 0 #2a2a2a,inset -2px -2px 0 #0a0a0a}
+#mtitle,#modal.calm #mtitle{color:#fff38a;text-shadow:2px 2px 0 #5a3a10}
+#cbar{border-color:#3a3a3a;background:#1a0508}
+#cbar i{background:var(--red);box-shadow:none}
+.sval,.lb-ok,.lit{color:var(--fg)!important;text-shadow:1px 1px 0 #000!important}
+.sval.r,.lb-bad,.st-bl,.st-fr,.st-am{color:var(--red)!important;text-shadow:1px 1px 0 #1a0008!important}
+#log::-webkit-scrollbar-track{background:#000}
+#log::-webkit-scrollbar-thumb{background:#3a3a3a;border:1px solid #1a1a1a}
+
+@media (max-width:1080px){
+  #map{font-size:13px;min-width:380px}
+  #grid{grid-template-columns:auto 330px}
+  #modal{min-width:380px}
+}
+@media (max-height:780px){
+  #crt{padding:14px 18px}
+  #grid{grid-template-rows:auto 170px}
+  #map{font-size:13px}
+}
+</style>
+</head>
+<body>
+<div id="crt">
+  <div id="app">
+    <header>
+      <span class="ht">RESONANCE</span>
+      <span id="facility">ONYX-7 DEEP RESEARCH FACILITY // SUB-LEVEL 09</span>
+      <span id="hdr">T+000 · SUBLEVEL 4</span>
+    </header>
+    <div id="grid">
+      <div class="panel" id="mapwrap">
+        <div class="ptitle">OPTIC FEED — SUB-LEVEL 09</div>
+        <div id="map"></div>
+        <div class="legend">@ you · # wall · . floor · + door · &gt; elevator · C chorus · S surveyor · A attuned · ? core/anomaly · T terminal · Ω lantern · f fuel · m medkit · p pipe · ~ tape · ! adrenaline · b bandage · y battery · % surg-trap<br>
+        WASD/ARROWS move · SPACE strike · E interact · K kick · F lantern · 1-5 use item · Q/U drop · X mute · &gt; descent</div>
+      </div>
+      <div class="panel" id="statuswrap">
+        <div class="ptitle">NEURAL REGULATOR</div>
+        <div class="speclabels"><span>◄ HEART</span><span>BRAIN ►</span></div>
+        <div id="specbar"><div id="specmark">▲</div></div>
+        <div class="srow"><span class="slabel">COGNITIVE SPECTRUM</span><span class="sval" id="cogval">NEUTRAL</span></div>
+        <div class="srow"><span class="slabel">PULSE FREQUENCY</span><span class="sval" id="pulse">1.05 Hz</span></div>
+        <div class="srow"><span class="slabel">SOUND NOISE LEVEL</span><span class="sval" id="noise">6 dB</span></div>
+        <div class="srow"><span class="slabel">SIGNAL RELAYS</span><span class="sval" id="relayval">0 / 2</span></div>
+        <div class="srow"><span class="slabel">LANTERN FUEL <span id="lanternstate"></span></span><span class="sval" id="lanternpct">100%</span></div>
+        <div class="bar"><i id="fuelbar" style="width:100%"></i></div>
+        <div class="ptitle">ANATOMICAL LIMB GRAPH</div>
+        <div id="limbs"></div>
+        <div id="equip"></div>
+      </div>
+      <div class="panel" id="logpanel">
+        <div class="ptitle">EVENT LOG — AUDIO / NEURAL TELEMETRY</div>
+        <div id="log"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="overlay">
+    <div id="modal">
+      <div id="mtitle" class="alarm">[!] RESPONSE REQUIRED</div>
+      <div id="cbar"><i id="cfill"></i></div>
+      <div id="mbody"></div>
+      <div id="mhint"></div>
+    </div>
+  </div>
+
+  <div id="boot"><pre id="boottxt"></pre></div>
+  <div id="splash">
+    <div id="splashinner">
+      <div id="splashmark">&#9670;</div>
+      <div id="splashlogo">INNER VOICE LOGISTICS</div>
+      <div id="splashsub">P R E S E N T S</div>
+      <div id="splashprompt">PRESS ANY KEY</div>
+    </div>
+  </div>
+</div>
+
+<script>
+(()=>{ 'use strict';
+
+/* ================================================================
+   RESONANCE — a blind "heart vs brain" survival horror
+   Single-file vanilla ES6. No dependencies.
+   ================================================================ */
+
+/* ---------------- CONSTANTS ---------------- */
+const MW = 42, MH = 22;
+const T_WALL=0, T_FLOOR=1, T_DOOR=2, T_DOOR_OPEN=3;
+const DIRS = [[1,0],[-1,0],[0,1],[0,-1]];
+const K = (x,y)=> y*MW + x;
+const LIMB_IDS = ['HEAD','TORSO','L_ARM','R_ARM','L_LEG','R_LEG'];
+const LIMB_LABEL = {HEAD:'HEAD',TORSO:'TORSO',L_ARM:'L.ARM',R_ARM:'R.ARM',L_LEG:'L.LEG',R_LEG:'R.LEG'};
+const LIMB_MAX = {HEAD:30,TORSO:60,L_ARM:30,R_ARM:30,L_LEG:35,R_LEG:35};
+const HEART_WORDS = ['DODGE','JOLT','FLEE','GRAB','ROLL','DIVE','PUSH','DUCK','SHOVE','SWING'];
+const HEART_WORDS_SHORT = ['JOLT','FLEE','GRAB','ROLL','DIVE','PUSH','DUCK'];
+const BONE_NAME = {HEAD:'CRANIUM',TORSO:'RIBCAGE',L_ARM:'LEFT HUMERUS',R_ARM:'RIGHT HUMERUS',L_LEG:'LEFT TIBIA',R_LEG:'RIGHT TIBIA'};
+const FOE_TYPES = {
+  heart: {
+    name:'THE CHORUS', glyph:'C',
+    desc:'a blind hunter of the old drill crews — jaw unhinged, vocal cords taut as a siren membrane',
+    dmg:()=>11+rnd(6),
+    parts:{HEAD:14,TORSO:24,L_ARM:12,R_ARM:12,L_LEG:14,R_LEG:14},
+    atk:['HEAD','HEAD','TORSO','L_ARM','R_ARM'],
+    weapon:'unhinged jaw',
+  },
+  brain: {
+    name:'THE SURVEYOR', glyph:'S',
+    desc:'pale flesh in a fused lead coat — surgical braces whirring, measuring everything it sees',
+    dmg:()=>9+rnd(6),
+    parts:{HEAD:16,TORSO:30,L_ARM:14,R_ARM:14,L_LEG:14,R_LEG:14},
+    atk:['L_ARM','R_ARM','L_LEG','R_LEG','TORSO'],
+    weapon:'surgical brace',
+  },
+  harmonized: {
+    name:'THE ATTUNED', glyph:'A',
+    desc:'cable and bone grown together, humming with the floor at 5.82 Hz',
+    dmg:()=>15+rnd(8),
+    parts:{HEAD:22,TORSO:42,L_ARM:18,R_ARM:18,L_LEG:18,R_LEG:18},
+    atk:['TORSO','TORSO','HEAD','L_ARM','R_ARM','L_LEG','R_LEG'],
+    weapon:'cable-fused limb',
+  },
+};
+
+const ITEM_TYPES = {
+  med: {name:'Medkit', desc:'Heals worst limb.'},
+  tape: {name:'Audio Tape', desc:'Loud 75dB distraction.'},
+  adrenaline: {name:'Adrenaline', desc:'+AP, crisis immunity.'},
+  bandage: {name:'Bandage', desc:'Stops all bleeding.'},
+  battery: {name:'Battery', desc:'+50% Lantern Fuel.'}
+};
+
+const PANIC = ['RUN. ','IT SEES YOU. ','MOVE. ','TOO LOUD. ','CAN\'T BREATHE. ','FASTER. ','BEHIND YOU. ','DON\'T STOP. '];
+const CLINICAL = [
+  [/\bcrawlers?\b/gi, m=>/s$/i.test(m)?'subjects-C':'subject-C'],
+  [/\bmonsters?\b/gi, m=>/s$/i.test(m)?'specimens':'specimen'],
+  [/\bcreatures?\b/gi, m=>/s$/i.test(m)?'specimens':'specimen'],
+  [/\bblood\b/gi,'circulatory fluid'],
+  [/\bscreamed\b/gi,'vocalized'],
+  [/\bscreams?\b/gi, m=>/s$/i.test(m)?'vocalizations':'vocalization'],
+  [/\bshriek(s|ed)?\b/gi,'vocal burst'],
+  [/\bcorpse?s?\b/gi,'remains'],
+  [/\bpain\b/gi,'nociception'],
+  [/\bfear\b/gi,'stress response'],
+  [/\bterror\b/gi,'acute stress'],
+  [/\bhorror\b/gi,'anomaly event'],
+  [/\bkill(s|ed|ing)?\b/gi,'neutralize'],
+  [/\bdying\b/gi,'terminating'],
+  [/\bdies?\b/gi, m=>/s$/i.test(m)?'ceases':'cease'],
+  [/\bdead\b/gi,'inactive'],
+  [/\bflesh\b/gi,'organic tissue'],
+  [/\bclaws?\b/gi, m=>/s$/i.test(m)?'appendages':'appendage'],
+  [/\bhunt(s|ing|ed)?\b/gi,'pursue'],
+  [/\bstalk(s|ing|ed)?\b/gi,'track'],
+  [/\bgroan(s|ed|ing)?\b/gi,'structural resonance'],
+  [/\bbone\b/gi,'calcified structure'],
+  [/\bscream(s|ing)?\b/gi,'expel air']
+];
+const ATMOS = [
+  'Water counts seconds somewhere below.',
+  'The walls sweat. The dark does not move. Yet.',
+  'Something small dies far away. You hear it end.',
+  'Your breath comes back to you a half-beat late.',
+  'A chime sounds from nowhere. Somewhere, glass breaks.',
+  'The air tastes of copper and old static.',
+  'Dust settles on your shoulders like a hand.',
+  'Pipes knock twice, as if answering each other.',
+  'The Pulse hums at 5.82 Hz. Your marrow answers in tune.',
+  'Boot soles ring on the grate. The sound climbs your skeleton.',
+  'Your blood moves oddly tonight — slow, oily, obedient.',
+  'A lead-lined lab coat hangs fused to the shape of its last owner.',
+];
+const LORE = [
+  'The whisper knows your name. It pronounces it wrong.',
+  'Something repeats your last footstep, half a beat late.',
+  'Your name is written on the ceiling. The letters are wet.',
+  'The walls are scarred with fingernail marks. All at the same height.',
+  'A voice counts room dimensions in a monotone. It does not breathe.',
+  'The Pulse hums through the boot soles. Through the tibia. Into the spine.',
+  'Somewhere below, a drill turns in an empty chuck. It never stops.',
+  'A calcified jaw lies on the floor, still faintly screaming.',
+];
+
+const MENU_ITEMS = [
+  'DESCEND INTO SUB-LEVEL 09',
+  'WORLD & HISTORY — THE PULSE',
+  'ANOMALOUS ENTITIES — DOSSIER',
+  'COGNITIVE SPECTRUM — MECHANICS',
+  'TERMINAL LOGS & EXCERPTS',
+  'CONTROLS & FIELD MANUAL',
+];
+const TERMINALS = [
+  {title:'TERMINAL LOG #014 — SENIOR ENGINEER V. VORONIN', body:[
+    '"The sound doesn\'t travel through the air. That is the first',
+    'mistake we made. It travels through the metal soles of our',
+    'boots. It travels up the tibia, into the pelvis, and sits at',
+    'the base of the spine. Dr. Kirov tried to cut his ears off',
+    'yesterday to stop it. He died within hours — not from the',
+    'bleeding, but because his ribcage vibrated until his lungs',
+    'collapsed."']},
+  {title:'FOUND STICKY NOTE — RESEARCH LAB B', body:[
+    '"If you see someone walking with two right arms, do not',
+    'speak. They are calculating the room\'s dimensions. If you',
+    'make a sound, they will add your bones to the measurement."']},
+  {title:'NEURAL REGULATOR DIAGNOSTIC LOG', body:[
+    'ALERT: Sub-Level 09 ambient pulse detected.',
+    'Frequency: 5.82 Hz [STABLE].',
+    'Status: limb integrity degrading. Left humerus vibrating at',
+    'critical resonance.',
+    'Recommendation: apply pressure cuff or sever limb before',
+    'harmonization occurs.']},
+];
+
+const FLOOR_LOGS = [
+  [
+    {title:'GATEHOUSE INTERCOM — 03:11', body:[
+      'The outer door has been unsealed from inside.',
+      'No evacuation order was ever transmitted.',
+      'A woman whispers: "If you hear your own voice, do not answer."']},
+    {title:'SECURITY SHIFT NOTE', body:[
+      'Personnel descend in pairs. They return alone.',
+      'The cameras show the second person walking behind them.',
+      'There is never a second person on the tape.']},
+  ],
+  [
+    {title:'TRIAGE BAY RECORD — DR. KIROV', body:[
+      'Subjects split along preference, not diagnosis.',
+      'The frightened become quick. The certain become precise.',
+      'Neither state contains enough of a person to leave intact.']},
+    {title:'CHILDREN\'S DRAWING, FOUND IN LOCKER 18', body:[
+      'A house is drawn under the ground. Three floors.',
+      'At the bottom is a green circle with teeth.',
+      'Under it: "MAMA IS IN THE HUM."']},
+  ],
+  [
+    {title:'VAULT ACCESS — 19:40', body:[
+      'The resonance here is physical. It presses against the eardrums.',
+      'We tried to insulate the walls. The sound ignored the insulation.',
+      'It travels through the floor, through the bones of our feet.']},
+    {title:'AUDIO LOG — RESEARCHER PAVEL', body:[
+      'The Core is not a machine. It is an ear.',
+      'It listens to the tectonic shifts, but it also listens to us.',
+      'It likes our marrow. It thinks we are music.']}
+  ],
+  [
+    {title:'DRILL CONTROL — NIGHT SHIFT LOG', body:[
+      'The pulse is not a sound. It is an intention.',
+      'It speaks in our marrow. We are the speakers now.',
+      'If the drill stops, the silence will drive us mad.']},
+    {title:'SCRATCHED MESSAGE — ELEVATOR DOOR', body:[
+      'Don\'t let it count you. If it starts measuring,',
+      'break your own bones if you have to, just get out of the pattern.',
+      'It cannot harmonize what is asymmetrical.']}
+  ],
+  [
+    {title:'FINAL TRANSMISSION — DIRECTOR', body:[
+      'I have reached the vault. The Attuned is me.',
+      'I let it count my bones. It did not find me wanting.',
+      'Tell my wife I am not coming back, but I am finally quiet.']}
+  ]
+];
+
+const LORE_PAGES = [
+  {title:'WORLD & HISTORY — THE PULSE & SUB-LEVEL 09', lines:[
+    'THE GREAT SIBERIAN BOREHOLE & THE RESONANCE (1978-1984)',
+    '',
+    'Deep beneath the permafrost of the Taymyr Peninsula, the Soviet',
+    'Ministry of Geological Extraction constructed SUB-LEVEL 09 — a',
+    'classified deep-earth research facility designated ONYX-7.',
+    'Nominally built to extract rare mineral deposits, its true',
+    'purpose was acoustic seismic prospecting: listening to the',
+    'tectonic shifts of the Eurasian plate.',
+    '',
+    'In November 1984, drilling rig BOREHOLE-9 breached a',
+    'subterranean granite void at a depth of 4,200 meters. The drill',
+    'bit did not hit magma or pressurized gas. It ceased resistance',
+    'entirely, descending into an ancient, acoustic chamber. Within',
+    'minutes, every seismic sensor across the Siberian tundra',
+    'registered a continuous, ultra-low frequency infrasound:',
+    '5.82 Hz.',
+    '',
+    '----------------------------------------------------------------',
+    'THE NATURE OF "THE PULSE"',
+    '',
+    'Unlike light or radiation, The Pulse is a physical, living',
+    'resonance. At 5.82 Hz, the frequency matches the natural',
+    'alpha-wave threshold of the human brain, as well as the',
+    'resonant frequency of human internal organs and bone marrow.',
+    '',
+    'CELLULAR HARMONIZATION: prolonged exposure to 5.82 Hz forces',
+    'organic tissue to vibrate in sync with the subterranean',
+    'chamber. Bones calcify into crystalline, tuning-fork-like',
+    'structures. Blood thins and turns into a dark, conductive oily',
+    'residue.',
+    '',
+    'THE COGNITIVE SPLIT: the human mind cannot process continuous',
+    'exposure to the anomaly. Exposure forces a violent fracture of',
+    'the psyche into two extreme, degenerated states:',
+    '',
+    '  THE HEART (pure instinct): total loss of logic,',
+    '  hyper-adrenaline production, extreme bodily panic, and',
+    '  primal violent preservation.',
+    '',
+    '  THE BRAIN (pure logic): complete death of empathy and',
+    '  emotion, hyper-analytical obsession, self-mutilation for',
+    '  mechanical efficiency, and cold, calculating hostility.',
+  ]},
+  {title:'ANOMALOUS ENTITIES — DOSSIER', lines:[
+    'I. THE CHORUS — the corrupted miners',
+    '',
+    'The drill crews and laborers were the first to collapse when',
+    'the subterranean dampeners failed. Overcome by terror, their',
+    'bodies warped into high-decibel hunting organisms.',
+    '',
+    'ANATOMY: bone fractures healed improperly as dense, exposed',
+    'skeletal calcifications. Their jaws are permanently dislocated',
+    'from endless screaming, turning their vocal cords into',
+    'biological sirens.',
+    '',
+    'BEHAVIOR: completely blind. They navigate entirely through',
+    'acoustic tracking, responding to the QUIETEST sound —',
+    'footsteps, dropped lantern fuel, rustling gear — with sudden,',
+    'explosive charges. One loud noise can carry them two steps.',
+    '',
+    '[FIELD NOTE] Glyph C. Perception threshold very low. Silence',
+    'is the only shield. Kicking doors or screaming brings them',
+    'running from across the level. In melee it bites high —',
+    'guard the skull, or take the jaw off with a pipe.',
+    '',
+    '----------------------------------------------------------------',
+    'II. THE SURVEYORS — the research collegium',
+    '',
+    'The facility\'s chief engineers and neuro-physicists attempted',
+    'to solve the crisis logically. Believing their emotions were',
+    'causing the psychological breakdown, they performed crude',
+    'surgical lobotomies and installed mechanical neural dampeners',
+    'directly into their skulls.',
+    '',
+    'ANATOMY: pale, bloodless skin clad in lead-lined lab coats',
+    'fused to their flesh. Their limbs are modified with surgical',
+    'tools, iron braces and sonic tuning devices welded to their',
+    'bones.',
+    '',
+    'BEHAVIOR: methodical and emotionless. They ignore light and',
+    'loud noises, walking fixed, mathematical patrol routes between',
+    'the module centers. If they encounter a human survivor they do',
+    'not attack in a rage — they systematically immobilize the',
+    'intruder to perform forced, alive surgical harmonization.',
+    '',
+    '[FIELD NOTE] Glyph S. They ignore sound entirely; only',
+    'proximity draws them off their route. Their braces aim for',
+    'your limbs and tend to FRACTURE. Learn their circuits — or',
+    'sever the lead-lined arms before they count your bones.',
+    '',
+    '----------------------------------------------------------------',
+    'III. THE ATTUNED — the anomalous amalgams',
+    '',
+    'Organisms that spent months at the center of the void. Their',
+    'bodies have surrendered to the 5.82 Hz wave entirely, fusing',
+    'human limbs, metal pipes and terminal cabling into pulsating,',
+    'quiet amalgams that guard the deepest corridors of the',
+    'sub-level.',
+    '',
+    '[FIELD NOTE] Glyph A. Slow — it moves every other beat — but',
+    'it feels your vibration through the floor when you are very',
+    'close. Light means nothing to it. It stands watch beside the',
+    'Resonance Core. If you must fight it, take the arms first —',
+    'and know that its ribcage is a fortress.',
+  ]},
+  {title:'COGNITIVE SPECTRUM — MECHANICS', lines:[
+    '[ EXTREME HEART ] <---- [ NEUTRAL ] ----> [ EXTREME BRAIN ]',
+    '   VISCERAL PANIC        STABLE MIND       COLD DETACHMENT',
+    '   UPPERCASE SCREAMS     STANDARD LOGS     CLINICAL TERMS',
+    '   HIGH SPEED /          HIGH CONTROL /    HIGH PRECISION /',
+    '   LOW CONTROL           LOW SPEED         LOW SPEED',
+    '',
+    'HEART BIAS (-3 to -10): your character is consumed by panic.',
+    'The event log mutates into erratic, screaming entries.',
+    'Adrenaline grants rapid physical reflexes — HEART crises give',
+    'you shorter sequences to type, and adrenaline shields your',
+    'bones — but your movements become noisy: every step carries',
+    '+6 dB of heartbeat-drum through your boot soles, and entities',
+    'across adjacent tiles take notice. In combat, panic reduces',
+    'your max Action Points (AP), making you act less tactically.',
+    '',
+    'BRAIN BIAS (+3 to +10): emotion is suppressed. Visceral',
+    'horrors are logged in cold medical jargon ("Subject',
+    'experiencing massive arterial fluid loss" instead of "You are',
+    'bleeding out"). Your strikes gain PRECISION (+20% damage) and',
+    'BRAIN crises present simpler calculations. You gain +2 AP in',
+    'combat, allowing methodical targeting. But the body is',
+    'treated like machinery: physical damage to your limbs causes',
+    'far worse mechanical penalties, and fractures come easier.',
+    '',
+    'The spectrum shifts with every choice you make inside a',
+    'crisis: [H] drags you toward the Heart. [B] toward the Brain.',
+    'There is no neutral way to survive Sub-Level 09.',
+  ]},
+  {title:'TERMINAL LOGS & EXCERPTS', lines:[
+    'TERMINAL LOG #014 — SENIOR ENGINEER V. VORONIN',
+    '',
+    '"The sound doesn\'t travel through the air. That is the first',
+    'mistake we made. It travels through the metal soles of our',
+    'boots. It travels up the tibia, into the pelvis, and sits at',
+    'the base of the spine. Dr. Kirov tried to cut his ears off',
+    'yesterday to stop it. He died within hours — not from the',
+    'bleeding, but because his ribcage vibrated until his lungs',
+    'collapsed."',
+    '',
+    '----------------------------------------------------------------',
+    'FOUND STICKY NOTE — RESEARCH LAB B',
+    '',
+    '"If you see someone walking with two right arms, do not',
+    'speak. They are calculating the room\'s dimensions. If you',
+    'make a sound, they will add your bones to the measurement."',
+    '',
+    '----------------------------------------------------------------',
+    'NEURAL REGULATOR DIAGNOSTIC LOG',
+    '',
+    'ALERT: Sub-Level 09 ambient pulse detected.',
+    'Frequency: 5.82 Hz [STABLE].',
+    'Status: limb integrity degrading. Left humerus vibrating at',
+    'critical resonance.',
+    'Recommendation: apply pressure cuff or sever limb before',
+    'harmonization occurs.',
+    '',
+    '[FIELD NOTE] Terminal anomalies (T) on the sub-level replay',
+    'these records. Your own regulator issues the same diagnostic',
+    'the moment one of your limbs drops below critical resonance.',
+  ]},
+  {title:'CONTROLS & FIELD MANUAL', lines:[
+    'MOVEMENT ......... WASD / ARROW KEYS (turn-based)',
+    'STRIKE .......... SPACE (opens melee with an adjacent entity)',
+    'INTERACT ........ E (core, terminals, pickups, doors)',
+    'KICK ............ K (adjacent door — VERY loud, 65 dB)',
+    'LANTERN ......... F (toggle) / Q (drop)',
+    'DROP WEAPON ..... U',
+    'USE ITEM ........ 1-5 (Uses item from inventory slot)',
+    'AUDIO ........... X (mute)',
+    '',
+    'SOUND: every action emits decibels. Sound decays -3 dB per',
+    'open tile and -20 dB through solid walls. Anything above an',
+    'entity\'s perception threshold pulls it toward the noise. The',
+    'Chorus hear almost everything. The Surveyors hear',
+    'nothing — they count rooms instead. The Attuned feels your',
+    'vibration through the floor.',    '',
+    'CRISIS: when a hostile reaches you or a trap springs, you have',
+    'a short window to choose. The trial then gets its own fresh',
+    'window — [H] HEART (type the sequence) or [B] BRAIN (solve the',
+    'calculation). Window lengths depend on your chosen difficulty.',
+    'Timeout or a wrong key is unmitigated damage to a random limb.',
+    '',
+    'MELEE (FALLOUT/F&H STYLE): SPACE on an adjacent entity opens',
+    'turn-based combat. You have Action Points (AP) to spend.',
+    '  [1] TARGETED STRIKE (4 AP): Aim at specific body parts.',
+    '      Sever the HEAD to kill outright, ARMS to blunt strength,',
+    '      LEGS to slow their tempo. Hit chances vary.',
+    '  [2] QUICK STRIKE (2 AP): Hits torso/arms randomly for less',
+    '      damage. Good when desperate.',
+    '  [3] GUARD (2 AP): Halves their next hit.',
+    '  [4] MEDKIT (3 AP): Patches mid-fight.',
+    '  [5] FLEE (4 AP): Loud and can fail.',
+    '  [7] THROW WEAPON (3 AP): Hurl your pipe for high damage, but',
+    '      you lose it and must recover it from the floor!',
+    '  [8] ADRENALINE (2 AP): +5 AP, shifts Heart.',
+    '  [9] BANDAGE (2 AP): Stops bleeding.',
+    '',
+    'ANATOMY: no global health. Six limb channels: HEAD, TORSO,',
+    'two arms, two legs. BLEEDING drains a limb every turn.',
+    'FRACTURED legs halve your speed — enemies get two actions per',
+    'step — and add +15 dB of scraping. FRACTURED arms ruin your',
+    'strikes and your grip: you cannot hold the lantern and the',
+    'pipe at once. Amputation is forever. Losing HEAD or TORSO',
+    'ends the signal.',
+    '',
+    'GOAL: reach the RESONANCE CORE (?) in the farthest chamber,',
+    'beside the Attuned, and interface with it. Survive the',
+    'descent. Do not run. Do not shout.',
+  ]},
+];
+
+/* ---------------- DIFFICULTY ---------------- */
+const DIFFICULTIES = {
+  EASY:{
+    label:'EASY — SURVIVOR', shortLabel:'EASY',
+    desc:'Fewer hunters, more room to breathe. For the story.',
+    heartCount:3, brainCount:1,
+    crisisCooldown:6, crisisImmunity:3,
+    crisisTotalMs:3200, challengeMs:{heart:3600,brain:4200},
+    dmgMult:0.75, meds:2, medHeal:34,
+  },
+  NORMAL:{
+    label:'NORMAL — RESEARCHER', shortLabel:'NORMAL',
+    desc:'The intended descent. Balanced risk.',
+    heartCount:4, brainCount:2,
+    crisisCooldown:4, crisisImmunity:2,
+    crisisTotalMs:2800, challengeMs:{heart:3200,brain:3700},
+    dmgMult:1, meds:1, medHeal:28,
+  },
+  HARD:{
+    label:'HARD — SUBJECT ZERO', shortLabel:'HARD',
+    desc:'More hunters, tighter windows, harsher damage.',
+    heartCount:5, brainCount:3,
+    crisisCooldown:2, crisisImmunity:0,
+    crisisTotalMs:2200, challengeMs:{heart:2600,brain:3100},
+    dmgMult:1.25, meds:1, medHeal:22,
+  },
+};
+const DIFF_ORDER = ['EASY','NORMAL','HARD'];
+let DIFF = DIFFICULTIES.NORMAL;
+
+/* ---------------- STATE ---------------- */
+let tiles, seenA, vis, field, rooms;
+let player, enemies, items, anomalies, sources;
+let limbs, lantern, weapon, inventory, muted;
+let turn, cognition, fear, pain, queue, crisis, crisisImmunity = 0;
+let floor = 0, archives = 0, relaysPowered = 0, relayGoal = 2;
+let crawlPhase = false, hbAcc = 0, lastFrame = 0;
+let menuIdx = 0, loreIdx = 0, loreOffset = 0, diffIdx = 1;
+let logs = [];
+let statCrises = 0, statKills = 0;
+let gameState = 'SPLASH';
+let bootReady = false, bootTimer = null;
+
+/* ---------------- DOM ---------------- */
+const $ = id => document.getElementById(id);
+const elMap=$('map'), elLog=$('log'), elHdr=$('hdr'),
+      elSpecMark=$('specmark'), elCogVal=$('cogval'), elPulse=$('pulse'), elNoise=$('noise'),
+      elFuelBar=$('fuelbar'), elLanternPct=$('lanternpct'), elLanternState=$('lanternstate'),
+      elLimbs=$('limbs'), elEquip=$('equip'),
+      elRelayVal=$('relayval'),
+      elOverlay=$('overlay'), elModal=$('modal'), elMTitle=$('mtitle'), elCFill=$('cfill'),
+      elMBody=$('mbody'), elMHint=$('mhint'),
+      elBoot=$('boot'), elBootTxt=$('boottxt'), elApp=$('app'),
+      elSplash=$('splash'), elFacility=$('facility');
+
+/* ---------------- HELPERS ---------------- */
+const rnd = n => Math.floor(Math.random()*n);
+const pick = a => a[rnd(a.length)];
+const clamp = (v,a,b)=> v<a?a:(v>b?b:v);
+const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const mdist = (a,b)=> Math.abs(a.x-b.x)+Math.abs(a.y-b.y);
+
+function invAdd(type, count=1) {
+    let item = inventory.find(i => i.type === type);
+    if (item) item.count += count;
+    else inventory.push({type, count});
+}
+function invRemove(type, count=1) {
+    let item = inventory.find(i => i.type === type);
+    if (item) {
+        item.count -= count;
+        if (item.count <= 0) inventory = inventory.filter(i => i !== item);
+    }
+}
+function invCount(type) {
+    let item = inventory.find(i => i.type === type);
+    return item ? item.count : 0;
+}
+
+/* ---------------- AUDIO ---------------- */
+let AC = null;
+function unlockAudio(){
+  if(!AC){ try{ AC = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ AC=null; } }
+  if(AC && AC.state==='suspended'){ AC.resume().catch(()=>{}); }
+}
+function tone(f,d,type,g,slide){
+  if(!AC||muted) return;
+  try{
+    const o=AC.createOscillator(), gn=AC.createGain();
+    o.type=type||'square';
+    o.frequency.setValueAtTime(f,AC.currentTime);
+    if(slide) o.frequency.exponentialRampToValueAtTime(Math.max(30,f+slide),AC.currentTime+d);
+    gn.gain.setValueAtTime(g||0.04,AC.currentTime);
+    gn.gain.exponentialRampToValueAtTime(0.0001,AC.currentTime+d);
+    o.connect(gn); gn.connect(AC.destination);
+    o.start(); o.stop(AC.currentTime+d+0.03);
+  }catch(e){}
+}
+const sfx = {
+  alarm(){ tone(880,.12,'square',.05); setTimeout(()=>tone(660,.12,'square',.05),130); setTimeout(()=>tone(880,.12,'square',.05),260); },
+  good(){ tone(520,.08,'square',.04); setTimeout(()=>tone(780,.1,'square',.04),90); },
+  bad(){ tone(150,.28,'sawtooth',.06,-90); },
+  tick(){ tone(1200,.03,'square',.02); },
+  step(){ tone(190,.02,'square',.012); },
+  thump(v){ tone(52,.09,'sine',v); },
+};
+
+/* ---------------- EVENT LOG + NARRATIVE MUTATION ---------------- */
+function log(text, cls){
+  logs.push({t:text, c:cls||'dim', turn});
+  if(logs.length>240) logs.shift();
+  renderLog();
+}
+function mutate(text){
+  let t = text;
+  if(pain > 7) return pick(['...','PLEASE STOP','AAAAAA','IT HURTS','NO MORE','I CAN\'T']);
+  
+  const hs = limbs.HEAD.state;
+  if(hs!=='HEALTHY'){
+    const p = hs==='BLEEDING'?0.05 : hs==='FRACTURED'?0.09 : 0.14;
+    t = t.split('').map(c=> (c!==' '&&Math.random()<p) ? pick(['#','▓','%','/','|','?','\\']) : c).join('');
+  }
+  if(cognition<=-6){
+    t = t.toUpperCase();
+    if(Math.random()<0.4) t = pick(PANIC)+t;
+    if(!/[!?]$/.test(t)) t = t+'!';
+  }else if(cognition>=6){
+    for(const [re,rep] of CLINICAL) t = t.replace(re,rep);
+  }
+  return t;
+}
+function renderLog(){
+  const slice = logs.slice(-70);
+  elLog.innerHTML = slice.map(L=>{
+    if(L._mt!==turn || L._mx===undefined){ L._mx=mutate(L.t); L._mt=turn; }
+    return '<div class="ln '+L.c+'"><span class="tn">T+'+String(L.turn).padStart(3,'0')+'</span> '+esc(L._mx)+'</div>';
+  }).join('');
+  elLog.scrollTop = elLog.scrollHeight;
+}
+
+/* ---------------- ANATOMY ENGINE ---------------- */
+function initLimbs(){
+  limbs = {};
+  for(const id of LIMB_IDS) limbs[id]={hp:LIMB_MAX[id],max:LIMB_MAX[id],state:'HEALTHY',warned:false};
+}
+function gripArms(){
+  let n=0;
+  for(const id of ['L_ARM','R_ARM']){
+    const s=limbs[id].state;
+    if(s!=='FRACTURED'&&s!=='AMPUTATED') n++;
+  }
+  return n;
+}
+function attackEff(){
+  let m=1;
+  for(const id of ['L_ARM','R_ARM']){
+    const s=limbs[id].state;
+    if(s==='FRACTURED') m=Math.min(m,0.55);
+    else if(s==='BLEEDING') m=Math.min(m,0.8);
+    else if(s==='AMPUTATED') m=Math.min(m,0.65);
+  }
+  return m;
+}
+const bothArmsGone = ()=> limbs.L_ARM.state==='AMPUTATED' && limbs.R_ARM.state==='AMPUTATED';
+const legImpaired  = ()=> ['L_LEG','R_LEG'].some(id=> limbs[id].state==='FRACTURED'||limbs[id].state==='AMPUTATED');
+const bothLegsGone = ()=> limbs.L_LEG.state==='AMPUTATED' && limbs.R_LEG.state==='AMPUTATED';
+function weightedLimb(){
+  const w={HEAD:2,TORSO:4,L_ARM:3,R_ARM:3,L_LEG:3,R_LEG:3};
+  const pool=[];
+  for(const id of LIMB_IDS) for(let k=0;k<w[id];k++) pool.push(id);
+  return pick(pool);
+}
+function damageLimb(id, dmg, heavy, forceFracture){
+  const L=limbs[id];
+  if(!L||L.state==='AMPUTATED') return;
+  L.hp-=dmg;
+  if(L.hp<=0){
+    L.hp=0; L.state='AMPUTATED';
+    log(LIMB_LABEL[id]+' — AMPUTATED. The channel goes flat. You cannot stop screaming.','alert');
+    pain += 5;
+    sfx.bad();
+    if(id==='HEAD') die('CRANIAL CHANNEL FLATLINE — NEOCORTEX LOST');
+    else if(id==='TORSO') die('TORSO CAVITY RUPTURED — SYSTEMIC SHOCK');
+    else{
+      const amp=LIMB_IDS.filter(i=>limbs[i].state==='AMPUTATED').length;
+      if(amp>=4) die('CATASTROPHIC SHOCK — MAJORITY OF BODY LOST');
+    }
+    return;
+  }
+  if(L.state!=='FRACTURED'){
+    let fF=heavy?0.45:0, fD=dmg>=20?0.35:0;
+    if(cognition>=3){ fF*=1.5; fD*=1.5; }
+    if(cognition<=-3){ fF*=0.7; fD*=0.7; }
+    if(forceFracture||(fF>0&&Math.random()<fF)||(fD>0&&Math.random()<fD)){
+      L.state='FRACTURED';
+      log(LIMB_LABEL[id]+' — FRACTURED. The bone splits through the skin.','alert');
+      pain += 2;
+    }else if(L.state!=='BLEEDING'&&Math.random()<0.5){
+      L.state='BLEEDING';
+      log(LIMB_LABEL[id]+' — BLEEDING. The nerve endings are exposed to the static air.','alert');
+      pain += 1;
+    }
+  }
+  if(L.hp<L.max*0.3&&!L.warned){
+    L.warned=true;
+    log('NEURAL REGULATOR: ALERT — '+BONE_NAME[id]+' vibrating at critical resonance.','alert');
+    log('Recommendation: apply pressure cuff or sever limb before harmonization occurs.','alert');
+  }
+}
+function bleedTick(){
+  for(const id of LIMB_IDS){
+    const L=limbs[id];
+    if(L.state!=='BLEEDING') continue;
+    L.hp-=2;
+    if(L.hp<=0){
+      L.hp=0; L.state='AMPUTATED';
+      log(LIMB_LABEL[id]+' bled dry. AMPUTATED.','alert');
+      if(id==='HEAD'){ die('CRANIAL CHANNEL FLATLINE — EXSANGUINATION'); return; }
+      if(id==='TORSO'){ die('TORSO CAVITY RUPTURED — EXSANGUINATION'); return; }
+      const amp=LIMB_IDS.filter(i=>limbs[i].state==='AMPUTATED').length;
+      if(amp>=4){ die('CATASTROPHIC SHOCK — MAJORITY OF BODY LOST'); return; }
+    }else if(Math.random()<0.2){
+      log('The wound on your '+LIMB_LABEL[id]+' weeps. The facility drinks it.','atm');
+    }
+  }
+}
+function addCog(d){ cognition=clamp(cognition+d,-10,10); }
+
+/* ---------------- MAP GENERATION ---------------- */
+function genMap(){
+  tiles=new Uint8Array(MW*MH);
+  rooms=[];
+  for(let i=0;i<80 && rooms.length<9;i++){
+    const w=4+rnd(6), h=3+rnd(4);
+    const x=1+rnd(MW-w-2), y=1+rnd(MH-h-2);
+    const r={x,y,w,h};
+    const overlap = rooms.some(o=> !(r.x+r.w+1<o.x||o.x+o.w+1<r.x||r.y+r.h+1<o.y||o.y+o.h+1<r.y));
+    if(overlap) continue;
+    rooms.push(r);
+  }
+  for(const r of rooms)
+    for(let yy=r.y;yy<r.y+r.h;yy++)
+      for(let xx=r.x;xx<r.x+r.w;xx++)
+        tiles[K(xx,yy)]=T_FLOOR;
+
+  const c=rooms.map(r=>({x:r.x+(r.w>>1), y:r.y+(r.h>>1)}));
+  for(let i=1;i<rooms.length;i++) carveCorridor(c[i-1],c[i]);
+  if(rooms.length>3) carveCorridor(c[0],c[rooms.length-1]);
+
+  for(const r of rooms){
+    if(r.w>=6&&r.h>=5){
+      for(let p=0;p<2;p++){
+        const px=r.x+1+rnd(r.w-2), py=r.y+1+rnd(r.h-2);
+        tiles[K(px,py)]=T_WALL;
+      }
+    }
+  }
+
+  for(const r of rooms){
+    const ring=[];
+    for(let x=r.x;x<r.x+r.w;x++){ ring.push([x,r.y-1]); ring.push([x,r.y+r.h]); }
+    for(let y=r.y;y<r.y+r.h;y++){ ring.push([r.x-1,y]); ring.push([r.x+r.w,y]); }
+    for(const [x,y] of ring){
+      if(x<1||y<1||x>=MW-1||y>=MH-1) continue;
+      const i=K(x,y);
+      if(tiles[i]!==T_FLOOR) continue;
+      const wU=tiles[K(x,y-1)]===T_WALL, wD=tiles[K(x,y+1)]===T_WALL,
+            wL=tiles[K(x-1,y)]===T_WALL, wR=tiles[K(x+1,y)]===T_WALL;
+      if((wU&&wD&&!wL&&!wR)||(wL&&wR&&!wU&&!wD)){
+        if(Math.random()<0.75) tiles[i]=T_DOOR;
+      }
+    }
+  }
+}
+function carveCorridor(a,b){
+  let x=a.x, y=a.y;
+  const horizFirst = Math.random()<0.5;
+  const stepH=()=>{ while(x!==b.x){ x+= x<b.x?1:-1; tiles[K(x,y)]=T_FLOOR; } };
+  const stepV=()=>{ while(y!==b.y){ y+= y<b.y?1:-1; tiles[K(x,y)]=T_FLOOR; } };
+  if(horizFirst){ stepH(); stepV(); } else { stepV(); stepH(); }
+}
+function occupied(x,y){
+  if(player.x===x&&player.y===y) return true;
+  return enemies.some(e=>e.alive&&e.x===x&&e.y===y);
+}
+function thingAt(x,y){
+  return items.some(it=>!it.taken&&it.x===x&&it.y===y) ||
+         anomalies.some(a=>a.x===x&&a.y===y);
+}
+function randCellInRoom(r){
+  return {x:r.x+rnd(r.w), y:r.y+rnd(r.h)};
+}
+function findSpot(excludeRooms){
+  for(let t=0;t<400;t++){
+    const ri=rnd(rooms.length);
+    if(excludeRooms&&excludeRooms.includes(ri)) continue;
+    const c=randCellInRoom(rooms[ri]);
+    if(tiles[K(c.x,c.y)]!==T_FLOOR) continue;
+    if(occupied(c.x,c.y)||thingAt(c.x,c.y)) continue;
+    if(Math.abs(c.x-player.x)+Math.abs(c.y-player.y)<6 && !excludeRooms) continue;
+    return c;
+  }
+  for(let t=0;t<2000;t++){
+    const x=1+rnd(MW-2), y=1+rnd(MH-2);
+    if(tiles[K(x,y)]===T_FLOOR&&!occupied(x,y)&&!thingAt(x,y)) return {x,y};
+  }
+  return {x:player.x,y:player.y};
+}
+function roomCentersShuffled(excludeIdx){
+  const arr=[];
+  rooms.forEach((r,i)=>{ if(i===excludeIdx) return; arr.push({x:r.x+(r.w>>1), y:r.y+(r.h>>1)}); });
+  for(let i=arr.length-1;i>0;i--){ const j=rnd(i+1); const t=arr[i]; arr[i]=arr[j]; arr[j]=t; }
+  return arr;
+}
+function populate(){
+  const s=rooms[0];
+  player.x=s.x+(s.w>>1); player.y=s.y+(s.h>>1);
+  let far=1, fd=-1;
+  for(let i=1;i<rooms.length;i++){
+    const r=rooms[i], d=Math.abs(r.x-player.x)+Math.abs(r.y-player.y);
+    if(d>fd){ fd=d; far=i; }
+  }
+  const target=rooms[far];
+  let targetCell={x:target.x+(target.w>>1),y:target.y+(target.h>>1)};
+  if(tiles[K(targetCell.x,targetCell.y)]!==T_FLOOR) targetCell=findSpot([0]);
+
+  if(floor<4) anomalies.push({x:targetCell.x,y:targetCell.y,kind:'stairs',armed:true,seen:false});
+  else anomalies.push({x:targetCell.x,y:targetCell.y,kind:'core',armed:true,seen:false});
+
+  const heartCount = floor===0 ? Math.max(1,DIFF.heartCount-3) : DIFF.heartCount + Math.floor(floor/2);
+  const brainCount = floor===0 ? 0 : DIFF.brainCount + Math.floor(floor/3);
+  
+  for(let i=0;i<heartCount;i++){
+    const c=findSpot([0,far]);
+    enemies.push({type:'heart',glyph:'C',name:FOE_TYPES.heart.name,x:c.x,y:c.y,hp:45,max:45,alive:true,crippled:false,combatToggle:false,cool:0,aware:false,perception:6+rnd(3)});
+  }
+  for(let i=0;i<brainCount;i++){
+    const c=findSpot([0]);
+    enemies.push({type:'brain',glyph:'S',name:FOE_TYPES.brain.name,x:c.x,y:c.y,hp:55,max:55,alive:true,crippled:false,combatToggle:false,cool:0,aware:false,perception:99,route:roomCentersShuffled(0),routeIdx:0});
+  }
+  if(floor===4){
+    const cc=anomalies[0]; let spot=null;
+    for(const [dx,dy] of DIRS){
+      const x=cc.x+dx,y=cc.y+dy;
+      if(x>=0&&y>=0&&x<MW&&y<MH&&tiles[K(x,y)]===T_FLOOR&&!occupied(x,y)) { spot={x,y}; break; }
+    }
+    if(!spot) spot=findSpot([0]);
+    enemies.push({type:'harmonized',glyph:'A',name:FOE_TYPES.harmonized.name,x:spot.x,y:spot.y,hp:90,max:90,alive:true,crippled:false,combatToggle:false,cool:0,aware:false,perception:99});
+  }
+  
+  for(let i=0;i<2+(floor===0?1:0);i++){ const c=findSpot([0]); items.push({x:c.x,y:c.y,kind:'fuel',taken:false,seen:false}); }
+  for(let i=0;i<1+(floor%2);i++){ const c=findSpot([0]); items.push({x:c.x,y:c.y,kind:'med',taken:false,seen:false}); }
+  if(floor===0){ const c=findSpot([0,far]); items.push({x:c.x,y:c.y,kind:'pipe',taken:false,seen:false}); }
+  
+  for(let i=0;i<1+floor;i++) {
+    const c=findSpot([0]); 
+    const types = ['tape','adrenaline','bandage','battery'];
+    items.push({x:c.x,y:c.y,kind:pick(types),taken:false,seen:false}); 
+  }
+  
+  for(let i=0;i<2+floor;i++){ const c=findSpot([0]); anomalies.push({x:c.x,y:c.y,kind:'trap',armed:true,seen:false}); }
+  for(let i=0;i<1+floor;i++){ const c=findSpot([0]); anomalies.push({x:c.x,y:c.y,kind:'surg_trap',armed:true,seen:false}); }
+  for(let i=0;i<2+floor;i++){ const c=findSpot([0]); anomalies.push({x:c.x,y:c.y,kind:'echo',armed:true,seen:false}); }
+  
+  relayGoal = floor >= 3 ? 3 : 2;
+  for(let i=0;i<relayGoal;i++){
+    const c=findSpot([0,far]);
+    anomalies.push({x:c.x,y:c.y,kind:'relay',armed:true,seen:false});
+  }
+  for(const note of FLOOR_LOGS[floor]){
+    const c=findSpot([0]); anomalies.push({x:c.x,y:c.y,kind:'terminal',armed:true,seen:false,note});
+  }
+}
+
+function descend(){
+  if(floor>=4) return;
+  floor++;
+  enemies=[]; items=[]; anomalies=[]; sources=[]; relaysPowered=0;
+  seenA=new Uint8Array(MW*MH); vis=new Uint8Array(MW*MH); field=new Float32Array(MW*MH);
+  genMap(); populate();
+  const names=['ACCESS VESTIBULE','SUB-LEVEL 08 — TRIAGE','SUB-LEVEL 09 — PULSE VAULT','SUB-LEVEL 10 — DRILL CONTROL','SUB-LEVEL 11 — THE CORE'];
+  elFacility.textContent='ONYX-7 DEEP RESEARCH FACILITY // '+names[floor]+' · '+DIFF.shortLabel;
+  log('ELEVATOR DESCENDS. '+names[floor]+'. The cable sings through the walls.','alert');
+  log(floor===1?'You find surgical wards arranged around a room that has no door.':'The vault has been waiting longer than the facility.','atm');
+  emitNoise(player.x,player.y,18,1); computeVis(); renderAll();
+}
+
+/* ---------------- ACOUSTIC FIELD ---------------- */
+function heapPush(h,v,i){
+  h.push([v,i]); let n=h.length-1;
+  while(n>0){
+    const p=(n-1)>>1;
+    if(h[p][0]>=h[n][0]) break;
+    const t=h[p]; h[p]=h[n]; h[n]=t; n=p;
+  }
+}
+function heapPop(h){
+  const top=h[0], last=h.pop();
+  if(h.length){
+    h[0]=last; let n=0;
+    for(;;){
+      const l=2*n+1, r=l+1; let m=n;
+      if(l<h.length&&h[l][0]>h[m][0]) m=l;
+      if(r<h.length&&h[r][0]>h[m][0]) m=r;
+      if(m===n) break;
+      const t=h[m]; h[m]=h[n]; h[n]=t; n=m;
+    }
+  }
+  return top;
+}
+function recomputeSound(){
+  field.fill(0);
+  for(const s of sources){
+    if(s.ttl<=0) continue;
+    const dist=new Float32Array(MW*MH).fill(-1);
+    const h=[];
+    const si=K(s.x,s.y);
+    dist[si]=s.db;
+    heapPush(h,s.db,si);
+    while(h.length){
+      const [d,i]=heapPop(h);
+      if(d<dist[i]) continue;
+      if(d<=0) continue;
+      const x=i%MW, y=(i/MW)|0;
+      for(const [dx,dy] of DIRS){
+        const nx=x+dx, ny=y+dy;
+        if(nx<0||ny<0||nx>=MW||ny>=MH) continue;
+        const ni=K(nx,ny);
+        const t=tiles[ni];
+        const cost = t===T_WALL?20 : t===T_DOOR?8 : 3;
+        const nd=d-cost;
+        if(nd>0&&nd>dist[ni]){ dist[ni]=nd; heapPush(h,nd,ni); }
+      }
+    }
+    for(let i=0;i<MW*MH;i++) if(dist[i]>field[i]) field[i]=dist[i];
+  }
+}
+function emitNoise(x,y,db,ttl){
+  sources.push({x,y,db,ttl:ttl||1});
+  recomputeSound();
+}
+
+/* ---------------- VISIBILITY / FOG ---------------- */
+function los(x0,y0,x1,y1){
+  let dx=Math.abs(x1-x0), dy=Math.abs(y1-y0),
+      sx=x0<x1?1:-1, sy=y0<y1?1:-1, err=dx-dy, x=x0, y=y0;
+  for(;;){
+    if(x===x1&&y===y1) return true;
+    const e2=2*err;
+    if(e2>-dy){ err-=dy; x+=sx; }
+    if(e2<dx){ err+=dx; y+=sy; }
+    if(x===x1&&y===y1) return true;
+    const t=tiles[K(x,y)];
+    if(t===T_WALL||t===T_DOOR) return false;
+  }
+}
+function playerLightRadius(){
+  let r=2;
+  if(lantern.carried&&lantern.lit&&lantern.fuel>0) r=6;
+  const hs=limbs.HEAD.state;
+  if(hs==='FRACTURED') r-=2;
+  else if(hs==='BLEEDING') r-=1;
+  else if(hs==='AMPUTATED') r=1;
+  return Math.max(1,r);
+}
+function addLight(cx,cy,r){
+  for(let y=Math.max(0,cy-r);y<=Math.min(MH-1,cy+r);y++){
+    for(let x=Math.max(0,cx-r);x<=Math.min(MW-1,cx+r);x++){
+      const ddx=x-cx, ddy=y-cy;
+      if(ddx*ddx+ddy*ddy > r*r+r) continue;
+      if(los(cx,cy,x,y)){ vis[K(x,y)]=2; seenA[K(x,y)]=1; }
+    }
+  }
+}
+function computeVis(){
+  vis.fill(0);
+  addLight(player.x,player.y,playerLightRadius());
+  if(!lantern.carried&&lantern.lit&&lantern.fuel>0) addLight(lantern.gx,lantern.gy,5);
+}
+
+/* ---------------- RENDER ---------------- */
+function enemyAt(x,y){ return enemies.find(e=>e.alive&&e.x===x&&e.y===y); }
+function renderMap(){
+  const rows=[];
+  for(let y=0;y<MH;y++){
+    let line='';
+    for(let x=0;x<MW;x++){
+      const i=K(x,y);
+      if(!seenA[i]){ line+=' '; continue; }
+      const visNow = vis[i]===2;
+      const mem = !visNow;
+      let ch=null, cls='';
+      if(x===player.x&&y===player.y){ ch='@'; cls='p'; }
+      else{
+        const e=enemyAt(x,y);
+        if(e&&visNow){
+          ch=e.crippled?e.glyph.toLowerCase():e.glyph;
+          cls = mdist(e,player)===1 ? 'ho' : 'e';
+        }else{
+          const it=items.find(t=>!t.taken&&t.x===x&&t.y===y);
+          if(it){
+            if(visNow) it.seen=true;
+            if(visNow||it.seen){
+              if(it.kind==='pipe') ch='p';
+              else if(it.kind==='med') ch='m';
+              else if(it.kind==='fuel') ch='f';
+              else if(it.kind==='tape') ch='~';
+              else if(it.kind==='adrenaline') ch='!';
+              else if(it.kind==='bandage') ch='b';
+              else if(it.kind==='battery') ch='y';
+              else ch='?';
+              cls='it';
+            }
+          }
+          if(!ch && !lantern.carried && lantern.gx===x&&lantern.gy===y){
+            if(visNow) lantern.gseen=true;
+            if(visNow||lantern.gseen){ ch='Ω'; cls='it'; }
+          }
+          if(!ch){
+            const a=anomalies.find(t=>t.x===x&&t.y===y);
+            if(a){
+              if(visNow) a.seen=true;
+              if(visNow||a.seen){
+                ch = a.kind==='core' ? '?' : a.kind==='stairs' ? '>' : a.kind==='terminal' ? (a.armed?'T':'t') : a.kind==='relay' ? (a.armed?'R':'r') : a.kind==='surg_trap' ? '%' : '?';
+                cls = a.kind==='core' ? 'anc' : a.kind==='stairs' ? 'it' : a.kind==='relay' ? 'it' : 'an';
+              }
+            }
+          }
+          if(!ch){
+            const t=tiles[i];
+            ch = t===T_WALL?'#' : t===T_DOOR?'+' : t===T_DOOR_OPEN?'/':'';
+            cls = t===T_WALL?'w' : t===T_FLOOR?'fl' : 'dr';
+            if(ch==='') ch='.';
+          }
+        }
+      }
+      line+='<span class="'+cls+(mem?' m':'')+'">'+ch+'</span>';
+    }
+    rows.push(line);
+  }
+  elMap.innerHTML=rows.join('\n');
+}
+function calcPulse(){
+  let p=1.05;
+  for(const id of LIMB_IDS) if(limbs[id].state==='BLEEDING') p+=0.15;
+  p+=enemies.filter(e=>e.alive&&mdist(e,player)===1).length*0.3;
+  if(!(lantern.carried&&lantern.lit&&lantern.fuel>0)) p+=0.25;
+  p+=Math.max(0,-cognition)*0.045;
+  p+=fear;
+  p+=pain * 0.1; // Pain raises pulse, causing screen tremor
+  return clamp(Math.round(p*100)/100,0.6,3.4);
+}
+function renderStatus(){
+  const pct=(cognition+10)/20*100;
+  elSpecMark.style.left=pct+'%';
+  const cogLabel = cognition<=-6?'EXTREME HEART': cognition<-2?'HEART BIAS':
+                   cognition>=6?'EXTREME BRAIN': cognition>2?'BRAIN BIAS':'NEUTRAL';
+  elCogVal.textContent=(cognition>0?'+':'')+cognition+' · '+cogLabel;
+  elCogVal.className='sval'+(Math.abs(cognition)>=6?' r':'');
+
+  const p=calcPulse();
+  elPulse.textContent=p.toFixed(2)+' Hz';
+  elPulse.className='sval'+(p>2.2?' r':'');
+  if(p>2.3) elApp.classList.add('tremor'); else elApp.classList.remove('tremor');
+
+  const n=Math.max(5.82,field[K(player.x,player.y)]||0);
+  elNoise.textContent=n.toFixed(1)+' dB';
+  elNoise.className='sval'+(n>55?' r':'');
+  elRelayVal.textContent=relaysPowered+' / '+relayGoal+(relaysPowered>=relayGoal?'  READY':'');
+
+  elFuelBar.style.width=lantern.fuel+'%';
+  elLanternPct.textContent=Math.round(lantern.fuel)+'%';
+  elLanternState.textContent='['+(lantern.carried?(lantern.lit?(lantern.fuel>0?'LIT':'DYING'):'UNLIT'):'GROUND')+']';
+
+  let html='';
+  for(const id of LIMB_IDS){
+    const L=limbs[id];
+    const filled=Math.ceil(L.hp/L.max*10);
+    const bar='█'.repeat(filled)+'░'.repeat(10-filled);
+    const st=L.state;
+    const stCls = st==='HEALTHY'?'st-ok': st==='BLEEDING'?'st-bl': st==='FRACTURED'?'st-fr':'st-am';
+    const barCls = st==='HEALTHY'?'lb-ok':'lb-bad';
+    html+='<div class="limb"><span class="lname">'+LIMB_LABEL[id]+'</span>'+
+          '<span class="lbar '+barCls+'">'+bar+'</span>'+
+          '<span class="'+stCls+'">'+st+'</span></div>';
+  }
+  elLimbs.innerHTML=html;
+  
+  let invStr = inventory.length ? inventory.map((it,i)=>`[${i+1}] ${ITEM_TYPES[it.type].name}(${it.count})`).join(' ') : 'EMPTY';
+  elEquip.innerHTML = 'WEAPON: '+(weapon||'FISTS')+' · ARCHIVES '+archives+'/6<br>INV: '+invStr+
+    (cognition<=-3?' · REFLEX+ (NOISY)':'')+
+    (cognition>=3?' · PRECISION+ (BRITTLE)':'')+
+    (bothLegsGone()?' · CRAWLING':'')+(legImpaired()&&!bothLegsGone()?' · HALTED GAIT':'');
+}
+function renderHdr(){
+  const floorName=['ENTRANCE','SUB-08','SUB-09','SUB-10','SUB-11'][floor]||'UNKNOWN';
+  elHdr.textContent='T+'+String(turn).padStart(3,'0')+' · '+floorName+' · SIGNAL '+
+    (gameState==='PLAY'?'NOMINAL':gameState==='CRISIS'?'!! CRISIS !!':gameState.toUpperCase());
+}
+function renderAll(){ renderMap(); renderStatus(); renderLog(); renderHdr(); }
+
+/* ---------------- TURN ENGINE ---------------- */
+function endTurn(){
+  turn++;
+  crisisImmunity=Math.max(0,crisisImmunity-1);
+  if(lantern.carried&&lantern.lit){
+    lantern.fuel=Math.max(0,lantern.fuel-0.7);
+    if(lantern.fuel===0){ lantern.lit=false; log('THE LANTERN DIES. The dark leans in.','alert'); sfx.bad(); }
+  }
+  bleedTick();
+  if(gameState!=='PLAY'){ renderAll(); return; }
+  for(const e of enemies) e.cool=Math.max(0,e.cool-1);
+  for(const s of sources) s.ttl--;
+  sources=sources.filter(s=>s.ttl>0);
+  recomputeSound();
+  fear=Math.max(0,fear-0.12);
+  pain=Math.max(0,pain-0.5); // Pain decays slowly
+  if(Math.random()<0.09) log(pick(ATMOS),'atm');
+  computeVis(); renderAll();
+  const acts=legImpaired()?2:1;
+  queue=[];
+  for(let a=0;a<acts;a++) for(const e of enemies) if(e.alive) queue.push(e);
+  processQueue();
+}
+function processQueue(){
+  while(gameState==='PLAY'&&queue.length){
+    const e=queue.shift();
+    if(!e||!e.alive) continue;
+    if(e.crippled&&(turn%2===0)) continue;
+    enemyAct(e);
+  }
+}
+
+/* ---------------- PLAYER ACTIONS ---------------- */
+function movePlayerTo(nx,ny){ player.x=nx; player.y=ny; }
+function tryPickup(it,verbose){
+  if(it.taken) return false;
+  if(it.kind==='fuel'){ it.taken=true; lantern.fuel=Math.min(100,lantern.fuel+40); log('Fuel cell drained into the lantern. [+'+Math.round(lantern.fuel)+'%]','good'); return true; }
+  if(it.kind==='pipe'){
+    if(weapon){ if(verbose) log('You are already carrying a weapon.','dim'); return false; }
+    if(gripArms()<2){ if(verbose) log('Your ruined hands cannot close around the pipe.','alert'); return false; }
+    it.taken=true; weapon='PIPE'; log('Pipe equipped. Two hands. Heavy. Honest.','good'); return true;
+  }
+  if(ITEM_TYPES[it.kind]){
+    it.taken=true;
+    invAdd(it.kind);
+    log(ITEM_TYPES[it.kind].name+' pocketed. '+ITEM_TYPES[it.kind].desc,'good');
+    return true;
+  }
+  return false;
+}
+function pickupLantern(){
+  if(weapon&&gripArms()<2){ log('No free functioning hand while wielding the pipe.','alert'); return; }
+  if(gripArms()<1){ log('Your arms cannot hold a lantern.','alert'); return; }
+  lantern.carried=true; lantern.gx=-1; lantern.gy=-1;
+  log('You reclaim the lantern. Light steadies.','good');
+}
+function dropLantern(silent){
+  if(!lantern.carried) return;
+  lantern.carried=false; lantern.gx=player.x; lantern.gy=player.y;
+  if(!silent) log('You set the lantern down. Its circle stays behind you.','atm');
+}
+function afterMove(nx,ny){
+  for(const it of items) if(!it.taken&&it.x===nx&&it.y===ny) tryPickup(it,false);
+  if(!lantern.carried&&lantern.gx===nx&&lantern.gy===ny) pickupLantern();
+  const a=anomalies.find(t=>t.x===nx&&t.y===ny);
+  if(a){
+    if(a.kind==='stairs'){
+      log(relaysPowered>=relayGoal?'A service elevator waits here. Its button glows green. [E] TO DESCEND.':'A service elevator waits here, unpowered. Restore '+(relayGoal-relaysPowered)+' more signal relay'+(relayGoal-relaysPowered===1?'':'s')+'.','dim');
+    }
+    if(a.kind==='echo'&&a.armed){
+      a.armed=false;
+      addCog(pick([-2,-1,1,2]));
+      log(pick(LORE),'good');
+      log('Cognitive drift registered on the spectrum.','sys');
+      emitNoise(nx,ny,10,1);
+      endTurn(); return;
+    }
+    if(a.kind==='trap'&&a.armed){
+      log('The floor exhales. Wires whip from the dark—','alert');
+      emitNoise(nx,ny,55,2);
+      triggerCrisis('trap',a);
+      return;
+    }
+    if(a.kind==='surg_trap'&&a.armed){
+      log('Mechanical restraints clamp your limbs. A rusted surgical arm descends...','alert');
+      emitNoise(nx,ny,55,2);
+      triggerCrisis('surg_trap',a);
+      return;
+    }
+    if(a.kind==='core'){
+      log('The resonance here is a physical pressure. [E] TO INTERFACE.','good');
+    }
+    if(a.kind==='relay'&&a.armed){
+      log('A dormant SIGNAL RELAY blinks in the dark. [E] TO CALIBRATE.','good');
+    }
+  }
+  endTurn();
+}
+function tryMove(dx,dy){
+  const nx=player.x+dx, ny=player.y+dy;
+  if(nx<0||ny<0||nx>=MW||ny>=MH) return;
+  if(bothLegsGone()){
+    crawlPhase=!crawlPhase;
+    if(crawlPhase){
+      log('You drag yourself forward by the arms. Slow. Loud.','atm');
+      movePlayerTo(nx,ny);
+      const t=tiles[K(nx,ny)];
+      if(t===T_WALL){ player.x-=dx; player.y-=dy; log('The wall stops you.','dim'); }
+      else if(t===T_DOOR){ tiles[K(nx,ny)]=T_DOOR_OPEN; emitNoise(nx,ny,30,2); log('The door creaks open under your weight.','atm'); }
+      else{
+        emitNoise(player.x,player.y,45,1);
+        afterMove(nx,ny);
+        return;
+      }
+      endTurn(); return;
+    }else{
+      log('Your arms tremble. You need a moment to haul yourself on.','atm');
+      emitNoise(player.x,player.y,28,1);
+      endTurn(); return;
+    }
+  }
+  const t=tiles[K(nx,ny)];
+  if(t===T_WALL){ log('Solid rock. It does not move for you.','dim'); return; }
+  if(t===T_DOOR){
+    tiles[K(nx,ny)]=T_DOOR_OPEN;
+    emitNoise(nx,ny,30,2);
+    log('The door creaks open. Hinges complaining.','atm');
+    endTurn(); return;
+  }
+  if(enemyAt(nx,ny)){ attack(); return; }
+  movePlayerTo(nx,ny);
+  emitNoise(player.x,player.y,22+(legImpaired()?15:0)+(cognition<=-3?6:0),1);
+  sfx.step();
+  if(legImpaired()&&Math.random()<0.4) log('Broken bone grinds as you step. The sound carries.','atm');
+  if(cognition<=-3&&Math.random()<0.15) log('Your heartbeat drums through your boot soles. Too loud.','atm');
+  afterMove(nx,ny);
+}
+function adjacentEnemy(){ return enemies.find(e=>e.alive&&mdist(e,player)===1); }
+function attack(){
+  const t=adjacentEnemy();
+  if(!t){
+    log('You strike the dark. Nothing strikes back.','atm');
+    emitNoise(player.x,player.y,25,1);
+    endTurn(); return;
+  }
+  enterCombat(t);
+}
+function kick(){
+  for(const [dx,dy] of DIRS){
+    const nx=player.x+dx, ny=player.y+dy;
+    if(nx<0||ny<0||nx>=MW||ny>=MH) continue;
+    if(tiles[K(nx,ny)]===T_DOOR){
+      tiles[K(nx,ny)]=T_DOOR_OPEN;
+      emitNoise(nx,ny,65,2);
+      log('The door BANGS open. The corridor repeats it three times.','alert');
+      endTurn(); return;
+    }
+  }
+  const e=adjacentEnemy();
+  if(e){
+    e.hp-=10;
+    emitNoise(player.x,player.y,60,2);
+    log('Your boot connects. It shrieks like a hinge.','alert');
+    if(e.hp<=0){ e.alive=false; statKills++; log('It does not get up.','good'); }
+    endTurn(); return;
+  }
+  log('You kick the dark. Satisfying. Loud.','atm');
+  emitNoise(player.x,player.y,40,1);
+  endTurn();
+}
+function interact(){
+  const stairs=anomalies.find(a=>a.kind==='stairs'&&Math.abs(a.x-player.x)+Math.abs(a.y-player.y)<=1);
+  if(stairs){
+    if(relaysPowered<relayGoal){
+      log('ELEVATOR LOCKED: '+(relayGoal-relaysPowered)+' SIGNAL RELAY'+(relayGoal-relaysPowered===1?'':'S')+' STILL DARK.','alert');
+      return;
+    }
+    log('You press the button. Somewhere below, a machine wakes up.','good');
+    descend(); return;
+  }
+  const core=anomalies.find(a=>a.kind==='core'&&Math.abs(a.x-player.x)+Math.abs(a.y-player.y)<=1);
+  if(core&&relaysPowered<relayGoal){ log('CORE LINK INCOMPLETE: restore all '+relayGoal+' vault relays before attempting interface.','alert'); return; }
+  if(core){ log('You reach into the resonance. It reaches back—','good'); triggerCrisis('core',core); return; }
+  const term=anomalies.find(a=>a.kind==='terminal'&&a.armed&&Math.abs(a.x-player.x)+Math.abs(a.y-player.y)<=1);
+  if(term){
+    term.armed=false;
+    const T=term.note||TERMINALS[term.idx];
+    log('— '+T.title+' —','good');
+    for(const ln of T.body) log(ln,'sys');
+    archives++;
+    if(archives===3) log('ARCHIVE CROSS-REFERENCE: the Core can be asked for silence, not destroyed.','good');
+    log('Terminal powers down. The glow dies politely.','dim');
+    endTurn(); return;
+  }
+  const relay=anomalies.find(a=>a.kind==='relay'&&a.armed&&Math.abs(a.x-player.x)+Math.abs(a.y-player.y)<=1);
+  if(relay){
+    relay.armed=false;
+    relaysPowered++;
+    const reward=pick(['The relay boots with a bright two-tone chime.','A tiny speaker plays a cheerful startup melody, then chokes on static.','Blue status lights chase each other along the wall.']);
+    log('SIGNAL RELAY '+relaysPowered+'/'+relayGoal+' CALIBRATED. '+reward,'good');
+    if(Math.random()<0.5){ lantern.fuel=Math.min(100,lantern.fuel+18); log('Grid spillover feeds the lantern. [+18%]','sys'); }
+    else { fear=Math.max(0,fear-0.2); log('For a moment, the facility sounds almost safe.','sys'); }
+    if(relaysPowered===relayGoal) log('ELEVATOR NETWORK ONLINE. The descent route is now available.','good');
+    emitNoise(player.x,player.y,18,1);
+    endTurn(); return;
+  }
+  for(const it of items){
+    if(it.taken) continue;
+    if(Math.abs(it.x-player.x)+Math.abs(it.y-player.y)===1){
+      if(tryPickup(it,true)){ endTurn(); return; }
+    }
+  }
+  for(const [dx,dy] of DIRS){
+    const nx=player.x+dx, ny=player.y+dy;
+    if(nx<0||ny<0||nx>=MW||ny>=MH) continue;
+    if(tiles[K(nx,ny)]===T_DOOR){
+      tiles[K(nx,ny)]=T_DOOR_OPEN;
+      emitNoise(nx,ny,30,2);
+      log('The door creaks open.','atm');
+      endTurn(); return;
+    }
+  }
+  log('Nothing responds to you here.','dim');
+}
+function toggleLantern(){
+  if(!lantern.carried){ log('The lantern is not in your hands.','dim'); return; }
+  if(lantern.fuel<=0){ log('Dry cell. Dead weight.','dim'); return; }
+  lantern.lit=!lantern.lit;
+  log(lantern.lit?'The lantern hisses alive. Shadows run for the walls.':'Darkness folds around you. You hear better. You see nothing.','sys');
+  emitNoise(player.x,player.y,8,1);
+  endTurn();
+}
+function dropPipe(){
+  if(!weapon){ log('Your hands are empty.','dim'); return; }
+  items.push({x:player.x,y:player.y,kind:'pipe',taken:false,seen:true});
+  weapon=null;
+  log('You let the pipe fall.','atm');
+  endTurn();
+}
+
+function useItem(slot) {
+  if (gameState !== 'PLAY') return;
+  if (slot >= inventory.length) return;
+  const item = inventory[slot];
+  const type = item.type;
+
+  if (type === 'med') {
+    let worst = null;
+    for (const id of LIMB_IDS) {
+      const L = limbs[id];
+      if (L.state === 'AMPUTATED') continue;
+      if (!worst || L.hp < worst.hp) worst = L;
+    }
+    if (!worst) { log('Nothing left to patch.','dim'); return; }
+    worst.hp = Math.min(worst.max, worst.hp + DIFF.medHeal);
+    if (worst.state === 'BLEEDING') worst.state = 'HEALTHY';
+    worst.warned = false;
+    invRemove('med');
+    log('You use a Medkit. The bleeding stops.','good');
+    pain = Math.max(0, pain - 2);
+    emitNoise(player.x, player.y, 8, 1);
+    endTurn();
+  } else if (type === 'tape') {
+    invRemove('tape');
+    emitNoise(player.x, player.y, 75, 3);
+    log('You activate the audio tape. It shrieks violently, drawing everything!','alert');
+    endTurn();
+  } else if (type === 'bandage') {
+    let bled = false;
+    for (const id of LIMB_IDS) {
+      if (limbs[id].state === 'BLEEDING') {
+        limbs[id].state = 'HEALTHY';
+        limbs[id].warned = false;
+        bled = true;
+      }
+    }
+    if (bled) {
+      invRemove('bandage');
+      log('You apply bandages. The bleeding stops.','good');
+      emitNoise(player.x, player.y, 5, 1);
+      endTurn();
+    } else {
+      log('You have no open wounds to bandage.','dim');
+    }
+  } else if (type === 'adrenaline') {
+    invRemove('adrenaline');
+    addCog(-3);
+    fear = 0;
+    pain = 0; // Adrenaline flushes pain
+    crisisImmunity = 5;
+    log('You inject adrenaline. Your pulse spikes, but pain vanishes!','alert');
+    emitNoise(player.x, player.y, 15, 1);
+    endTurn();
+  } else if (type === 'battery') {
+    invRemove('battery');
+    lantern.fuel = Math.min(100, lantern.fuel + 50);
+    log('You swap the lantern battery. [+50%]','good');
+    emitNoise(player.x, player.y, 5, 1);
+    endTurn();
+  }
+}
+
+/* ---------------- ENEMY AI ---------------- */
+function bfsFrom(e){
+  const prev=new Int32Array(MW*MH).fill(-1);
+  const start=K(e.x,e.y);
+  prev[start]=start;
+  const q=[start];
+  for(let qi=0;qi<q.length;qi++){
+    const cur=q[qi], cx=cur%MW, cy=(cur/MW)|0;
+    for(const [dx,dy] of DIRS){
+      const nx=cx+dx, ny=cy+dy;
+      if(nx<0||ny<0||nx>=MW||ny>=MH) continue;
+      const ni=K(nx,ny);
+      if(prev[ni]!==-1) continue;
+      if(tiles[ni]===T_WALL) continue;
+      if(ni===K(player.x,player.y)) continue;
+      if(enemyAt(nx,ny)) continue;
+      prev[ni]=cur;
+      q.push(ni);
+    }
+  }
+  return {prev,q,start};
+}
+function depthOf(b,cell){
+  let d=0, cur=cell;
+  while(b.prev[cur]!==cur&&d<500){ cur=b.prev[cur]; d++; }
+  return d;
+}
+function firstStep(b,target){
+  if(target===b.start||target<0) return -1;
+  if(b.prev[target]===-1) return -1;
+  let cur=target;
+  while(b.prev[cur]!==b.start){ cur=b.prev[cur]; }
+  return cur;
+}
+function enemyStep(e,cell){
+  const nx=cell%MW, ny=(cell/MW)|0;
+  const i=K(nx,ny);
+  if(tiles[i]===T_DOOR){
+    tiles[i]=T_DOOR_OPEN;
+    emitNoise(nx,ny,32,2);
+    if(vis[i]===2) log('A door is forced open nearby.','atm');
+    return;
+  }
+  e.x=nx; e.y=ny;
+  emitNoise(nx,ny,13,1);
+  if(vis[i]===2&&Math.random()<0.25) log('Claws click against tile. Close.','atm');
+  if(Math.abs(nx-player.x)+Math.abs(ny-player.y)===1&&e.cool<=0&&crisisImmunity<=0){
+    e.cool=DIFF.crisisCooldown;
+    crisisImmunity=DIFF.crisisImmunity;
+    fear=Math.min(2.5,fear+0.3);
+    emitNoise(player.x,player.y,26,1);
+    triggerCrisis('enemy',e);
+  }
+}
+function wander(e){
+  const opts=[];
+  for(const [dx,dy] of DIRS){
+    const nx=e.x+dx, ny=e.y+dy;
+    if(nx<0||ny<0||nx>=MW||ny>=MH) continue;
+    const ni=K(nx,ny);
+    if(tiles[ni]===T_WALL||tiles[ni]===T_DOOR) continue;
+    if(enemyAt(nx,ny)||(nx===player.x&&ny===player.y)) continue;
+    opts.push(ni);
+  }
+  if(opts.length) enemyStep(e,pick(opts));
+}
+function pursue(e,scoreM){
+  const b=bfsFrom(e);
+  let bi=-1, bestM=1e9, bestD=1e9;
+  for(const cell of b.q){
+    if(cell===b.start) continue;
+    const cx=cell%MW, cy=(cell/MW)|0;
+    const m=scoreM(cx,cy);
+    const d=depthOf(b,cell);
+    if(m<bestM||(m===bestM&&d<bestD)){ bestM=m; bestD=d; bi=cell; }
+  }
+  if(bi>=0){
+    const s=firstStep(b,bi);
+    if(s>=0){ enemyStep(e,s); return true; }
+  }
+  return false;
+}
+function loudestReachable(e){
+  const b=bfsFrom(e);
+  let best=-1, bi=-1;
+  for(const cell of b.q){
+    if(cell===b.start) continue;
+    const v=field[cell];
+    if(v>=e.perception&&v>best){ best=v; bi=cell; }
+  }
+  if(bi<0) return -1;
+  return firstStep(b,bi);
+}
+function enemyAct(e){
+  const man=mdist(e,player);
+  if(man===1&&e.cool<=0&&crisisImmunity<=0){
+    e.cool=DIFF.crisisCooldown;
+    crisisImmunity=DIFF.crisisImmunity;
+    fear=Math.min(2.5,fear+0.3);
+    emitNoise(player.x,player.y,26,1);
+    triggerCrisis('enemy',e);
+    return;
+  }
+  if(e.type==='heart'){
+    if(field[K(e.x,e.y)]>=e.perception){
+      const s=loudestReachable(e);
+      if(s>=0){
+        enemyStep(e,s);
+        if(gameState!=='PLAY') return;
+        if(field[K(e.x,e.y)]>=e.perception){
+          const s2=loudestReachable(e);
+          if(s2>=0&&s2!==K(e.x,e.y)&&s2!==s) enemyStep(e,s2);
+        }
+        return;
+      }
+    }
+    if(Math.random()<0.45){
+      wander(e);
+      if(gameState==='PLAY'&&Math.random()<0.15){
+        emitNoise(e.x,e.y,40,1);
+        if(vis[K(e.x,e.y)]===2) log('The chorus shrieks — a living siren, giving away its position.','alert');
+      }
+    }
+    return;
+  }
+  if(e.type==='brain'){
+    if(man<=3) e.aware=true;
+    else if(e.aware&&man>6) e.aware=false;
+    if(e.aware){
+      pursue(e,(cx,cy)=>Math.abs(cx-player.x)+Math.abs(cy-player.y));
+      return;
+    }
+    const tgt=e.route[e.routeIdx%e.route.length];
+    if(Math.abs(e.x-tgt.x)+Math.abs(e.y-tgt.y)<=1){ e.routeIdx++; return; }
+    pursue(e,(cx,cy)=>Math.abs(cx-tgt.x)+Math.abs(cy-tgt.y));
+    return;
+  }
+  if(turn%2===0) return;
+  if(man<=2) e.aware=true;
+  else if(e.aware&&man>5) e.aware=false;
+  if(e.aware){
+    if(man<=3&&Math.random()<0.25) log('The attuned hums with the floor itself. 5.82 Hz.','alert');
+    pursue(e,(cx,cy)=>Math.abs(cx-player.x)+Math.abs(cy-player.y));
+    return;
+  }
+  if(Math.random()<0.3) wander(e);
+}
+
+/* ---------------- TEXT COMBAT (FALLOUT AP + F&H LIMBS) ---------------- */
+let combat = null;
+const PART_LABEL={HEAD:'skull',TORSO:'ribcage',L_ARM:'left arm',R_ARM:'right arm',L_LEG:'left leg',R_LEG:'right leg'};
+
+function ensureFoeLimbs(e){
+  if(!e.limbs){
+    e.limbs={};
+    const parts=FOE_TYPES[e.type].parts;
+    for(const k in parts) e.limbs[k]={hp:parts[k],max:parts[k]};
+    if(e.crippled) e.limbs.L_LEG.hp=0;
+    if(e.hp<e.max*0.4) e.limbs.TORSO.hp=Math.max(1,Math.round(e.limbs.TORSO.hp*0.5));
+  }
+  return e.limbs;
+}
+const foePart=(e,id)=>ensureFoeLimbs(e)[id];
+const foePartDown=(e,id)=>foePart(e,id).hp<=0;
+const foeAliveParts=(e,ids)=>ids.filter(id=>!foePartDown(e,id));
+function bar(cur,max){
+  const f=Math.max(0,Math.ceil(cur/max*10));
+  return '['+'█'.repeat(f)+'░'.repeat(10-f)+']';
+}
+function partTag(e,id){
+  const L=foePart(e,id);
+  return L.hp<=0?'[· severed ·]':bar(L.hp,L.max);
+}
+function clog(t){ combat.log.push(t); if(combat.log.length>7) combat.log.shift(); }
+
+function calcMaxAP(){
+  let ap = 10;
+  if(limbs.L_LEG.state === 'FRACTURED') ap -= 1;
+  if(limbs.R_LEG.state === 'FRACTURED') ap -= 1;
+  if(limbs.L_LEG.state === 'AMPUTATED') ap -= 2;
+  if(limbs.R_LEG.state === 'AMPUTATED') ap -= 2;
+  if(cognition >= 3) ap += 2; 
+  if(cognition <= -3) ap -= 2; 
+  return Math.max(5, ap);
+}
+
+function enterCombat(e){
+  if(gameState!=='PLAY') return;
+  gameState='COMBAT';
+  combat={e, phase:'menu', guard:false, stun:0, turnNo:1, log:[], ap:0};
+  ensureFoeLimbs(e);
+  emitNoise(player.x,player.y,30,1);
+  clog('You close in on '+FOE_TYPES[e.type].name+'.');
+  clog(FOE_TYPES[e.type].desc+'.');
+  elOverlay.classList.add('on');
+  elModal.classList.add('combat');
+  elMTitle.className='';
+  startPlayerCombatTurn();
+}
+
+function startPlayerCombatTurn(){
+  combat.ap = calcMaxAP();
+  combat.guard = false;
+  combat.phase = 'menu';
+  renderCombat();
+}
+
+function combatTitle(){
+  return FOE_TYPES[combat.e.type].name+'  ·  TURN '+combat.turnNo;
+}
+
+function renderCombat(){
+  const e=combat.e, F=FOE_TYPES[e.type];
+  elMTitle.textContent=combatTitle() + '  ·  AP: ' + combat.ap + '/' + calcMaxAP();
+  let s='';
+  s+='  '+F.desc+'.\n\n';
+  s+='  FOE   HEAD '+partTag(e,'HEAD')+'   TORSO '+partTag(e,'TORSO')+'\n';
+  s+='        L.ARM '+partTag(e,'L_ARM')+'  R.ARM '+partTag(e,'R_ARM')+'\n';
+  s+='        L.LEG '+partTag(e,'L_LEG')+'  R.LEG '+partTag(e,'R_LEG')+'\n\n';
+  s+='  YOU   '+LIMB_IDS.map(id=>
+    LIMB_LABEL[id]+' '+(limbs[id].state==='AMPUTATED'?'gone':
+    limbs[id].state==='HEALTHY'?'ok':limbs[id].state.toLowerCase())).join('  ')+'\n\n';
+  s+='  '+'-'.repeat(58)+'\n';
+  s+=combat.log.map(l=>'  > '+l).join('\n')+'\n';
+  s+='  '+'-'.repeat(58)+'\n';
+  
+  if(combat.phase==='menu'){
+    s+='  [1] TARGETED STRIKE (4 AP)   [2] QUICK STRIKE (2 AP)\n';
+    s+='  [3] GUARD (2 AP)             [4] MEDKIT ('+invCount('med')+') (3 AP)\n';
+    s+='  [5] FLEE (4 AP)              [6] END TURN\n';
+    if(weapon) s+='  [7] THROW '+weapon+' (3 AP)\n';
+    if(invCount('adrenaline') > 0) s+='  [8] ADRENALINE ('+invCount('adrenaline')+') (2 AP)\n';
+    if(invCount('bandage') > 0) s+='  [9] BANDAGE ('+invCount('bandage')+') (2 AP)\n';
+  }else if(combat.phase==='target'){
+    s+='  TARGET (AIMED - 4 AP):\n';
+    const accBase = 0.6 + (cognition>=3?0.1:0) - (limbs.L_ARM.state==='FRACTURED'||limbs.R_ARM.state==='FRACTURED'?0.15:0) - (bothArmsGone()?0.3:0);
+    const calcHit = (part) => {
+      let acc = accBase;
+      if(part==='HEAD') acc -= 0.3;
+      if(part==='TORSO') acc += 0.1;
+      if(part==='L_LEG' || part==='R_LEG') acc += 0.15;
+      return Math.round(clamp(acc, 0.05, 0.95) * 100) + '%';
+    };
+    s+='  [1] HEAD ('+calcHit('HEAD')+')   [2] TORSO ('+calcHit('TORSO')+')\n';
+    s+='  [3] L.ARM ('+calcHit('L_ARM')+')   [4] R.ARM ('+calcHit('R_ARM')+')\n';
+    s+='  [5] L.LEG ('+calcHit('L_LEG')+')   [6] R.LEG ('+calcHit('R_LEG')+')\n';
+    s+='  [ESC] BACK\n';
+  }
+  
+  elMBody.className='combatbody';
+  elMBody.innerHTML=esc(s);
+  elMHint.textContent=combat.phase==='menu'
+    ? 'ACTION POINTS (AP) SYSTEM: CRIPPLE LIMBS. THROW WEAPONS. SURVIVE.'
+    : 'PICK WHERE THE BLOW LANDS. SEVER = PERMANENT.';
+}
+
+function combatKey(k){
+  if(!combat) return;
+  if(combat.phase==='menu'){
+    if(k==='1' && combat.ap >= 4){ combat.phase='target'; renderCombat(); return; }
+    if(k==='2' && combat.ap >= 2){ combatStrike(null, false); return; } 
+    if(k==='3' && combat.ap >= 2){ combat.guard=true; combat.ap -= 2; clog('You brace behind your forearms.'); renderCombat(); checkEndTurn(); return; }
+    if(k==='4' && combat.ap >= 3){
+      if(invCount('med')>0){ combatMedkit(); combat.ap -= 3; checkEndTurn(); }
+      else{ clog('No medkits left.'); renderCombat(); }
+      return;
+    }
+    if(k==='5' && combat.ap >= 4){ attemptFlee(); return; }
+    if(k==='6' || k===' '){ endPlayerTurn(); return; }
+    if(k==='7' && weapon && combat.ap >= 3){ throwWeapon(); return; }
+    if(k==='8' && combat.ap >= 2 && invCount('adrenaline') > 0){
+      invRemove('adrenaline');
+      combat.ap += 5; 
+      addCog(-2);
+      pain = 0;
+      clog('You inject adrenaline! +5 AP. Your heart drums violently.');
+      emitNoise(player.x,player.y,15,1);
+      renderCombat();
+      checkEndTurn();
+      return;
+    }
+    if(k==='9' && combat.ap >= 2 && invCount('bandage') > 0){
+      invRemove('bandage');
+      let bled = false;
+      for (const id of LIMB_IDS) {
+        if (limbs[id].state === 'BLEEDING') {
+          limbs[id].state = 'HEALTHY';
+          limbs[id].warned = false;
+          bled = true;
+        }
+      }
+      if(bled) clog('You bandage your wounds. Bleeding stopped.');
+      else clog('You waste a bandage on intact skin.');
+      renderCombat();
+      checkEndTurn();
+      return;
+    }
+    return;
+  }
+  if(combat.phase==='target'){
+    const map={'1':'HEAD','2':'TORSO','3':'L_ARM','4':'R_ARM','5':'L_LEG','6':'R_LEG'};
+    if(k==='Escape'){ combat.phase='menu'; renderCombat(); return; }
+    if(map[k] && combat.ap >= 4){ combatStrike(map[k], true); return; }
+    return;
+  }
+}
+
+function combatStrike(part, aimed){
+  const e=combat.e, F=FOE_TYPES[e.type];
+  if(aimed) combat.ap -= 4;
+  else combat.ap -= 2;
+  
+  combat.phase='resolving';
+  renderCombat();
+  
+  setTimeout(()=>{
+    if(gameState!=='COMBAT'||!combat) return;
+    
+    let acc = 0.6;
+    if(aimed){
+      acc += 0.1;
+      if(cognition >= 3) acc += 0.1;
+      if(part === 'HEAD') acc -= 0.3;
+      if(part === 'TORSO') acc += 0.1;
+      if(part === 'L_LEG' || part === 'R_LEG') acc += 0.15;
+    } else {
+      acc = 0.85;
+      part = pick(['TORSO', 'TORSO', 'L_ARM', 'R_ARM', 'L_LEG']);
+    }
+    
+    if(limbs.L_ARM.state === 'FRACTURED' || limbs.R_ARM.state === 'FRACTURED') acc -= 0.15;
+    if(bothArmsGone()) acc -= 0.3;
+    acc = clamp(acc, 0.05, 0.95);
+    
+    if(Math.random() > acc){
+      clog('Your strike whistles past. It adjusts its measure of you.');
+      emitNoise(player.x,player.y,40,1);
+      checkEndTurn(); return;
+    }
+    
+    let dmgBase=weapon==='PIPE'?24:12;
+    if(bothArmsGone()) dmgBase=6;
+    const dmgMult = aimed ? 1.0 : 0.6;
+    const dmg=Math.max(3,Math.round(dmgBase*attackEff()*(cognition>=3?1.2:1)*(0.85+Math.random()*0.3)*(aimed?1.15:1) * dmgMult));
+    
+    const L=foePart(e,part);
+    if(L.hp<=0){ clog('Nothing left of the '+PART_LABEL[part]+' to hit.'); checkEndTurn(); return; }
+    
+    L.hp=Math.max(0,L.hp-dmg);
+    emitNoise(player.x,player.y,45,1);
+    
+    const crit=aimed?Math.random()<0.45:Math.random()<0.2;
+    if(L.hp<=0){
+      clog('Your '+(weapon==='PIPE'?'pipe':'fist')+' lands true — '+severFoePart(e,part)+'  ['+dmg+']');
+      if(crit) clog('The stump sprays dark oily residue across the wall.');
+    }else{
+      clog('You strike the '+PART_LABEL[part]+' for '+dmg+'.');
+      if(crit){
+        L.hp=Math.max(0,L.hp-Math.round(dmg*0.5));
+        e.bleeding=true;
+        clog('A rending hit — the wound weeps dark conductive residue.');
+      }
+    }
+    
+    if(foePart(e,'HEAD').hp<=0||foePart(e,'TORSO').hp<=0){
+      clog(F.name+' COLLAPSES. Quiet returns — for a moment.');
+      endCombat(true); return;
+    }
+    
+    checkEndTurn();
+  },420);
+}
+
+function throwWeapon(){
+  const e=combat.e, F=FOE_TYPES[e.type];
+  combat.ap -= 3;
+  combat.phase='resolving';
+  renderCombat();
+  
+  setTimeout(()=>{
+    if(gameState!=='COMBAT'||!combat) return;
+    const acc = 0.75 + (cognition>=3?0.15:0) - (limbs.L_ARM.state==='FRACTURED'||limbs.R_ARM.state==='FRACTURED'?0.2:0);
+    if(Math.random() > clamp(acc, 0.1, 0.95)){
+      clog('You hurl the pipe. It clatters into the dark, lost.');
+      items.push({x:player.x,y:player.y,kind:'pipe',taken:false,seen:true});
+      weapon=null;
+      emitNoise(player.x,player.y,40,1);
+      checkEndTurn(); return;
+    }
+    const dmg = 20 + rnd(10);
+    const part = pick(['HEAD','TORSO','L_ARM','R_ARM']);
+    const L=foePart(e,part);
+    if(L.hp>0){
+      L.hp=Math.max(0,L.hp-dmg);
+      clog('You hurl the pipe! It cracks against '+PART_LABEL[part]+' for '+dmg+' dmg.');
+      if(L.hp<=0){
+        clog(severFoePart(e,part));
+      }
+      if(foePart(e,'HEAD').hp<=0||foePart(e,'TORSO').hp<=0){
+        clog(F.name+' COLLAPSES. Quiet returns — for a moment.');
+        items.push({x:e.x,y:e.y,kind:'pipe',taken:false,seen:false});
+        endCombat(true); return;
+      }
+    }
+    items.push({x:player.x,y:player.y,kind:'pipe',taken:false,seen:true});
+    weapon=null;
+    emitNoise(player.x,player.y,45,1);
+    checkEndTurn();
+  },420);
+}
+
+function combatMedkit(){
+  let worst=null;
+  for(const id of LIMB_IDS){
+    const L=limbs[id];
+    if(L.state==='AMPUTATED') continue;
+    if(!worst||L.hp<worst.hp) worst=L;
+  }
+  if(!worst) return;
+  worst.hp=Math.min(worst.max,worst.hp+DIFF.medHeal);
+  if(worst.state==='BLEEDING') worst.state='HEALTHY';
+  worst.warned=false;
+  invRemove('med');
+  clog('You seal a wound mid-fight. Your hands shake.');
+  emitNoise(player.x,player.y,8,1);
+}
+
+function attemptFlee(){
+  const e=combat.e;
+  combat.ap = 0;
+  combat.phase='resolving';
+  renderCombat();
+  setTimeout(()=>{
+    if(gameState!=='COMBAT'||!combat) return;
+    let ch=0.55;
+    ch+=(limbs.L_LEG.state==='HEALTHY'?0.08:0)+(limbs.R_LEG.state==='HEALTHY'?0.08:0);
+    if(legImpaired()) ch-=0.2;
+    ch+=(foePartDown(e,'L_LEG')?0.1:0)+(foePartDown(e,'R_LEG')?0.1:0);
+    emitNoise(player.x,player.y,50,2);
+    if(Math.random()<ch){
+      clog('You break away — boot-slaps ringing off every wall.');
+      endCombat(false);
+    }else{
+      clog('It cuts the angle. You are not away.');
+      enemyCombatTurn();
+    }
+  },420);
+}
+
+function checkEndTurn(){
+  if(!combat) return;
+  if(combat.ap < 2){
+    endPlayerTurn();
+  } else {
+    combat.phase='menu';
+    renderCombat();
+  }
+}
+
+function endPlayerTurn(){
+  if(!combat) return;
+  combat.phase='resolving';
+  renderCombat();
+  setTimeout(()=>{ if(gameState==='COMBAT'&&combat) enemyCombatTurn(); },450);
+}
+
+function severFoePart(e,part){
+  switch(part){
+    case 'HEAD': return 'THE SKULL PARTS FROM THE NECK.';
+    case 'TORSO': return 'THE SPINE PARTS FROM THE RIBCAGE.';
+    case 'L_ARM': case 'R_ARM': {
+      const arms=foeAliveParts(e,['L_ARM','R_ARM']).length;
+      return arms===1 ? 'THE '+(part==='L_ARM'?'LEFT':'RIGHT')+' ARM COMES OFF. IT HOWLS.'
+                      : 'THE SECOND ARM COMES OFF. IT CAN ONLY GNAW NOW.';
+    }
+    case 'L_LEG': case 'R_LEG': {
+      e.crippled=true;
+      return 'THE LEG TENDONS PART. IT DRAGS ITSELF.';
+    }
+  }
+  return 'flesh parts.';
+}
+
+function enemyCombatTurn(){
+  if(gameState!=='COMBAT'||!combat) return;
+  const e=combat.e, F=FOE_TYPES[e.type];
+  if(e.bleeding){
+    const t=foePart(e,'TORSO');
+    if(t.hp>0){
+      t.hp=Math.max(0,t.hp-2);
+      clog('Its wound pumps dark residue with every beat.');
+      if(t.hp<=0){
+        clog(F.name+' COLLAPSES. Quiet returns — for a moment.');
+        endCombat(true); return;
+      }
+    }
+  }
+  if(combat.stun>0){ combat.stun--; clog('It staggers, half a beat behind the Pulse.'); endEnemyTurn(); return; }
+  if(e.crippled){
+    e.combatToggle=!e.combatToggle;
+    if(!e.combatToggle){ clog('It drags its ruined legs, losing the tempo.'); endEnemyTurn(); return; }
+  }
+  const armsAlive=foeAliveParts(e,['L_ARM','R_ARM']).length;
+  let mult=armsAlive===2?1:armsAlive===1?0.6:0.35;
+  const legsAlive=foeAliveParts(e,['L_LEG','R_LEG']).length;
+  if(legsAlive<2) mult*=0.75;
+  const dmg=Math.max(2,Math.round(F.dmg()*mult*(combat.guard?0.5:1)*DIFF.dmgMult));
+  const target=pick(F.atk);
+  
+  let logMsg;
+  if (e.type === 'brain') {
+    const surveyorTexts = [
+      `The Surveyor pins you down. Its brace peels back your ${LIMB_LABEL[target]}.`,
+      `It drills into your ${LIMB_LABEL[target]}, searching for the source of your fear.`,
+      `Cold clamps bite into your ${LIMB_LABEL[target]}. It measures your agony.`
+    ];
+    logMsg = pick(surveyorTexts) + ` [${dmg} dmg]`;
+  } else {
+    logMsg = `Its ${F.weapon} descends — ${LIMB_LABEL[target]} takes ${dmg}.`;
+  }
+  clog(logMsg);
+  
+  damageLimb(target,dmg,e.type==='brain',false);
+  if(gameState!=='COMBAT'){ return; }
+  endEnemyTurn();
+}
+
+function endEnemyTurn(){
+  if(!combat) return;
+  combat.turnNo++;
+  startPlayerCombatTurn();
+}
+
+function endCombat(killed){
+  const e=combat.e, F=FOE_TYPES[e.type];
+  if(killed){ e.alive=false; statKills++; log(F.name+' falls. You are still breathing.','good'); sfx.good(); }
+  else{
+    log('You disengage from '+F.name+'. Your lungs burn.','atm');
+    const dx=Math.sign(e.x-player.x), dy=Math.sign(e.y-player.y);
+    const bx=e.x+dx, by=e.y+dy;
+    if(bx>=0&&by>=0&&bx<MW&&by<MH&&tiles[K(bx,by)]!==T_WALL&&!enemyAt(bx,by)&&!(bx===player.x&&by===player.y)){ e.x=bx; e.y=by; }
+  }
+  elModal.classList.remove('combat');
+  elMBody.className='';
+  combat=null;
+  elOverlay.classList.remove('on');
+  gameState='PLAY';
+  computeVis(); renderAll();
+  endTurn();
+}
+
+/* ---------------- CRISIS ENGINE ---------------- */
+function genMath(){
+  const easy=cognition>=3;
+  const t=rnd(4);
+  let expr,ans;
+  if(t===0){
+    const b=2+rnd(easy?4:7), quotient=2+rnd(easy?5:9), a=b*quotient, c=1+rnd(easy?5:9);
+    expr=a+' \u00f7 '+b+' + '+c; ans=quotient+c;
+  }else if(t===1){
+    const a=2+rnd(easy?3:5), b=2+rnd(easy?3:5), c=rnd(a*b);
+    expr=a+' \u00d7 '+b+' \u2212 '+c; ans=a*b-c;
+  }else if(t===2){
+    const a=10+rnd(easy?20:40), b=1+rnd(9), c=1+rnd(9);
+    expr=a+' \u2212 '+b+' + '+c; ans=a-b+c;
+  }else{
+    const a=1+rnd(9), b=2+rnd(easy?2:4), c=2+rnd(easy?4:6);
+    expr=a+' + '+b+' \u00d7 '+c; ans=a+b*c;
+  }
+  return {expr,ans};
+}
+function triggerCrisis(src,obj){
+  if(gameState!=='PLAY') return;
+  gameState='CRISIS';
+  statCrises++;
+  crisis={
+    src, obj,
+    phase:'choice', mode:null, buf:'', word:null, expr:null, answer:null,
+    total:DIFF.crisisTotalMs, deadline:performance.now()+DIFF.crisisTotalMs,
+    onResolve: src==='enemy'
+      ? ()=>{ if(gameState==='PLAY') processQueue(); }
+      : ()=>{ if(gameState==='PLAY') endTurn(); },
+  };
+  elOverlay.classList.add('on');
+  elModal.classList.remove('calm');
+  elModal.classList.remove('combat');
+  elMTitle.className='alarm';
+  elMTitle.textContent='[!] RESPONSE REQUIRED';
+  elMBody.className='';
+  elCFill.style.width='100%';
+  elMBody.innerHTML='PRESS <span class="lit">[H]</span> HEART&nbsp;&nbsp;|&nbsp;&nbsp;<span class="lit">[B]</span> BRAIN';
+  const hint = src==='enemy'
+    ? (obj.type==='heart' ? 'THE CHORUS HAS FOUND YOU. ITS JAWS ARE A SIREN.'
+      : obj.type==='brain' ? 'A SURVEYOR IS ON YOU. IT WANTS YOU ON THE TABLE.'
+      : 'THE ATTUNED REACHES FOR YOU. EVERYTHING VIBRATES.')
+    : src==='trap' ? 'THE FLOOR BETRAYED YOU.' 
+    : src==='surg_trap' ? 'THE SURGICAL ARM IS DESCENDING. CHOOSE YOUR FATE.' 
+    : 'THE CORE AWAITS AN ANSWER.';
+  elMHint.textContent=(DIFF.crisisTotalMs/1000).toFixed(1)+'s TO CHOOSE. THE TRIAL THEN GETS ITS OWN WINDOW. '+hint;
+  sfx.alarm();
+  renderHdr();
+}
+function renderHeartChallenge(){
+  const w=crisis.word, b=crisis.buf;
+  let html='';
+  for(let i=0;i<w.length;i++){
+    const done=i<b.length;
+    html+='<span class="'+(done?'lit':'unlit')+'">'+w[i]+'</span> ';
+  }
+  elMBody.innerHTML='TYPE THE SEQUENCE:<br>'+html+'<br><span class="unlit">['+esc(b)+']</span>';
+}
+function renderBrainChallenge(){
+  elMBody.innerHTML='SOLVE:<br><span class="lit">'+esc(crisis.expr)+'</span> = <span class="lit">'+esc(crisis.buf)+'</span><span class="unlit">_</span>';
+}
+function startChallenge(){
+  crisis.phase='challenge';
+  crisis.total=DIFF.challengeMs[crisis.mode];
+  crisis.deadline=performance.now()+crisis.total;
+  crisis.buf='';
+  if(crisis.mode==='heart'){
+    crisis.word=pick(cognition<=-3?HEART_WORDS_SHORT:HEART_WORDS);
+    elMTitle.className='';
+    elMTitle.textContent='HEART RESPONSE — MOVE';
+    renderHeartChallenge();
+    elMHint.textContent='TYPE IT. ONE WRONG KEY = IMPACT. FRESH WINDOW: '+(DIFF.challengeMs.heart/1000).toFixed(1)+'s';
+  }else{
+    const q=genMath();
+    crisis.expr=q.expr; crisis.answer=q.ans;
+    elMTitle.className='';
+    elMTitle.textContent='BRAIN RESPONSE — COMPUTE';
+    renderBrainChallenge();
+    elMHint.textContent='TYPE THE ANSWER. BACKSPACE PERMITTED. FRESH WINDOW: '+(DIFF.challengeMs.brain/1000).toFixed(1)+'s';
+  }
+  sfx.tick();
+}
+function resolveCrisis(success,why){
+  if(gameState!=='CRISIS'||!crisis) return;
+  const c=crisis;
+  crisis=null;
+  gameState='RESOLVING';
+  elCFill.style.width='0%';
+  elMTitle.className='';
+  if(success){
+    elModal.classList.add('calm');
+    elMTitle.textContent=c.mode==='heart'?'EVADED':'PARRIED';
+    elMBody.innerHTML=c.mode==='heart'?'<span class="lit">Instinct moved you first.</span>':'<span class="lit">Computation held the line.</span>';
+    elMHint.textContent='';
+    sfx.good();
+  }else{
+    elModal.classList.remove('calm');
+    elMTitle.textContent='IMPACT';
+    elMBody.innerHTML='<span class="lit" style="color:var(--red)">UNMITIGATED.</span>';
+    elMHint.textContent=why==='timeout'?'TIME EXPIRED.':'WRONG INPUT.';
+    sfx.bad();
+  }
+  setTimeout(()=>{
+    elOverlay.classList.remove('on');
+    applyCrisisOutcome(c,success,why);
+    if(gameState==='RESOLVING'){
+      gameState='PLAY';
+      computeVis(); renderAll();
+      if(c.onResolve) c.onResolve();
+    }
+  },750);
+}
+function chaosRoll(){
+  const r=Math.random();
+  if(r<0.3&&lantern.carried){
+    dropLantern(true);
+    log('THE LANTERN TUMBLES FROM YOUR GRIP!','alert');
+  }else if(r<0.55){
+    const id=pick(['L_ARM','R_ARM']);
+    damageLimb(id,10,true);
+    log('Something snaps in your '+LIMB_LABEL[id]+' as you twist!','alert');
+  }else if(r<0.8){
+    emitNoise(player.x,player.y,78,2);
+    log('You scream. Everything hears.','alert');
+  }
+}
+function applyCrisisOutcome(c,success,why){
+  if(c.src==='enemy'){
+    if(success){
+      if(c.mode==='heart'){
+        addCog(-1);
+        log(pick(['YOU SLIP ASIDE — ','YOU LUNGE AWAY — ','INSTINCT MOVES YOU — '])+'its strike tears empty air.','good');
+        chaosRoll();
+      }else{
+        addCog(1);
+        c.obj.hp-=35;
+        const foeArms=foeAliveParts(c.obj,['L_ARM','R_ARM']);
+        if(c.obj.hp<=0){
+          c.obj.alive=false; statKills++;
+          log('Parry, perfect. The appendage parts from the subject. It collapses.','good');
+        }else if(foeArms.length){
+          ensureFoeLimbs(c.obj)[foeArms[0]].hp=0;
+          c.obj.crippled=true;
+          log('Parry. You sever its leading limb — it recoils, crippled.','good');
+        }else{
+          c.obj.crippled=true;
+          log('Parry. You shear through tendon — it recoils, crippled.','good');
+        }
+      }
+    }else{
+      const lid=weightedLimb();
+      const d = Math.round((c.obj.type==='harmonized' ? 22+rnd(12) : 16+rnd(14))*DIFF.dmgMult);
+      const surgical = c.obj.type==='brain';
+      log(surgical
+        ? 'The surveyor does not rage — it measures. Clamps bite into '+LIMB_LABEL[lid]+'. '+d+' damage.'
+        : 'The strike lands. '+LIMB_LABEL[lid]+' takes '+d+' damage.','alert');
+      damageLimb(lid,d,why!=='timeout',surgical);
+      emitNoise(player.x,player.y,50,1);
+    }
+  }else if(c.src==='trap'){
+    c.obj.armed=false;
+    if(success){
+      log('You clear the mechanism. Wires snap shut on emptiness.','good');
+      addCog(c.mode==='brain'?1:-1);
+      if(c.mode==='heart') chaosRoll();
+    }else{
+      const lid=weightedLimb();
+      const d=Math.round((18+rnd(12))*DIFF.dmgMult);
+      log('The trap takes '+LIMB_LABEL[lid]+'. '+d+' damage.','alert');
+      damageLimb(lid,d,true);
+      emitNoise(player.x,player.y,60,2);
+    }
+  }else if(c.src==='surg_trap'){
+    c.obj.armed=false;
+    if(success){
+      log('You wrench free of the restraints before the blade falls. Barely.','good');
+      addCog(c.mode==='brain'?1:-1);
+      pain += 2;
+      if(c.mode==='heart') chaosRoll();
+    }else{
+      const lid = pick(['L_ARM','R_ARM','L_LEG','R_LEG']);
+      log('The blade falls! It shears through your '+LIMB_LABEL[lid]+'. You tear yourself free, bleeding.','alert');
+      damageLimb(lid, 100, true, true); // Force amputation
+      pain += 5;
+      emitNoise(player.x,player.y,60,2);
+    }
+  }else if(c.src==='core'){
+    if(success){ win(); return; }
+    const lid=weightedLimb();
+    log('The core rejects you. Resonance flays your '+LIMB_LABEL[lid]+'.','alert');
+    damageLimb(lid,Math.round(24*DIFF.dmgMult),true);
+  }
+}
+function handleCrisisKey(ev){
+  const k=ev.key;
+  if(!crisis) return;
+  if(crisis.phase==='choice'){
+    if(k==='h'||k==='H'||k==='b'||k==='B'){
+      crisis.mode=(k==='h'||k==='H')?'heart':'brain';
+      startChallenge();
+    }
+    return;
+  }
+  if(crisis.phase==='challenge'){
+    if(crisis.mode==='heart'){
+      if(/^[a-zA-Z]$/.test(k)){
+        const ch=crisis.word[crisis.buf.length];
+        if(k.toUpperCase()===ch){
+          crisis.buf+=ch;
+          renderHeartChallenge();
+          sfx.tick();
+          if(crisis.buf.length===crisis.word.length) resolveCrisis(true);
+        }else{
+          resolveCrisis(false,'wrongkey');
+        }
+      }
+    }else{
+      if(/^[0-9]$/.test(k)){
+        const nb=crisis.buf+k;
+        if(!String(crisis.answer).startsWith(nb)){
+          resolveCrisis(false,'wrongkey');
+        }else{
+          crisis.buf=nb;
+          renderBrainChallenge();
+          sfx.tick();
+          if(nb===String(crisis.answer)) resolveCrisis(true);
+        }
+      }else if(k==='Backspace'){
+        crisis.buf=crisis.buf.slice(0,-1);
+        renderBrainChallenge();
+      }
+    }
+  }
+}
+
+/* ---------------- DEATH / WIN ---------------- */
+function showEnd(isWin,reason){
+  elOverlay.classList.add('on');
+  elModal.classList.toggle('calm',!!isWin);
+  elModal.classList.remove('combat');
+  elMTitle.className='';
+  elMTitle.textContent=isWin?'RESONANCE ACHIEVED':'SIGNAL LOST';
+  elMBody.className='';
+  elCFill.style.width='0%';
+  const ending = cognition<=-4
+    ? 'You leave shaking, alive enough to remember every sound.'
+    : cognition>=4
+      ? 'You leave with the solution. It will take years to learn what it cost.'
+      : archives>=3
+        ? 'You ask it for silence. For one breath, the whole earth listens.'
+        : 'You leave with a question still moving beneath your ribs.';
+  elMBody.innerHTML=isWin
+    ? '<span class="lit">5.82 Hz [STABLE].</span><br>The Core answers in the shape of your own heartbeat.<br>'+ending+'<br><br>Above, the snow has covered the entrance. The elevator is still descending.'
+    : '<span class="lit" style="color:var(--red)">'+esc(reason)+'</span><br>The Pulse continues at 5.82 Hz. It does not need you anymore.';
+  elMHint.textContent='TURNS '+turn+' · FLOORS '+(floor+1)+'/5 · ARCHIVES '+archives+'/6 · CRISES '+statCrises+' · KILLS '+statKills+' · COGNITION '+(cognition>0?'+':'')+cognition+' — PRESS [R] FOR MAIN MENU';
+  renderHdr();
+}
+function die(reason){
+  if(gameState==='DEAD'||gameState==='WIN') return;
+  gameState='DEAD';
+  sfx.bad();
+  showEnd(false,reason);
+}
+function win(){
+  if(gameState==='WIN') return;
+  gameState='WIN';
+  sfx.good();
+  showEnd(true,'');
+}
+
+/* ---------------- MAIN MENU & LORE ARCHIVE ---------------- */
+function leaveSplash(){
+  elSplash.style.display='none';
+  showMenu();
+}
+function showMenu(){
+  gameState='MENU'; menuIdx=0;
+  crisis=null;
+  elOverlay.classList.remove('on');
+  elBoot.style.display='block';
+  elFacility.textContent='ONYX-7 DEEP RESEARCH FACILITY // SUB-LEVEL 09';
+  renderMenu();
+}
+function renderMenu(){
+  const banner=[
+    '+======================================================+',
+    '|                                                      |',
+    '|      R E S O N A N C E                               |',
+    '|      THE PULSE // SUB-LEVEL 09 // 5.82 Hz            |',
+    '|                                                      |',
+    '+======================================================+',
+    '',
+    '   ONYX-7 DEEP RESEARCH FACILITY — TAYMYR PENINSULA',
+    '   4,200 METERS BELOW THE PERMAFROST. NOISE = DEATH.',
+    '',
+  ];
+  let s=banner.join('\n')+'\n';
+  MENU_ITEMS.forEach((it,i)=>{
+    s+='   '+(i===menuIdx?'> ':'  ')+'['+(i+1)+'] '+it+'\n';
+  });
+  s+='\n   W/S OR ARROWS — SELECT       ENTER — CONFIRM';
+  elBootTxt.textContent=s;
+}
+function openLore(i){
+  loreIdx=i; loreOffset=0;
+  gameState='LORE';
+  renderLore();
+}
+function renderLore(){
+  const P=LORE_PAGES[loreIdx];
+  const VIS=23;
+  const lines=P.lines;
+  loreOffset=clamp(loreOffset,0,Math.max(0,lines.length-VIS));
+  let s='== '+P.title+' ' + '='.repeat(Math.max(0,56-P.title.length)) + '\n\n';
+  s+=lines.slice(loreOffset,loreOffset+VIS).join('\n')+'\n';
+  const up=loreOffset>0?'[W/UP] SCROLL UP   ':'                    ';
+  const dn=(loreOffset+VIS<lines.length)?'[S/DOWN] SCROLL DOWN   ':'                        ';
+  s+='\n'+up+dn+'[LEFT/RIGHT] PAGE   [ESC] BACK   '+(loreIdx+1)+'/'+LORE_PAGES.length;
+  elBootTxt.textContent=s;
+}
+function selectMenu(){
+  if(menuIdx===0){ showDiff(); return; }
+  openLore(menuIdx-1);
+}
+function showDiff(){
+  gameState='DIFF';
+  renderDiff();
+}
+function renderDiff(){
+  let s='== SELECT DIFFICULTY '+'='.repeat(38)+'\n\n';
+  DIFF_ORDER.forEach((key,i)=>{
+    const d=DIFFICULTIES[key];
+    s+='   '+(i===diffIdx?'> ':'  ')+'['+(i+1)+'] '+d.label+'\n';
+    if(i===diffIdx) s+='       '+d.desc+'\n';
+    s+='\n';
+  });
+  s+='\n   W/S OR ARROWS — SELECT       ENTER — DESCEND       ESC — BACK';
+  elBootTxt.textContent=s;
+}
+function selectDiff(){
+  DIFF=DIFFICULTIES[DIFF_ORDER[diffIdx]];
+  init(); startBoot();
+}
+
+/* ---------------- BOOT SEQUENCE ---------------- */
+const BOOT_LINES=[
+  'RESONANCE // NEURAL INTERFACE BUILD 2.31',
+  'ONYX-7 DEEP RESEARCH FACILITY — OUTER ENTRANCE',
+  'TAYMYR PENINSULA, SIBERIA — 4,200 M BELOW PERMAFROST',
+  '',
+  'AMBIENT PULSE DETECTED: 5.82 Hz [STABLE]',
+  'CALIBRATING OPTIC FEED ............ OK',
+  'CALIBRATING COCHLEAR GRID ......... OK',
+  'MAPPING PERIPHERAL NERVE CLUSTER .. OK',
+  'ANATOMICAL SENSORS ONLINE: 6 LIMB CHANNELS',
+  '',
+  'DESCENT ROUTE: ENTRANCE > TRIAGE > VAULT > DRILL > CORE',
+  'HOSTILE SIGNATURES DEEP BELOW:',
+  '  x THE CHORUS ..... BLIND. ACOUSTIC. SILENCE IS SURVIVAL.',
+  '  x THE SURVEYORS .. PATROLLING. PROXIMITY DRAWS THEM.',
+  '  x THE ATTUNED .... GUARDS THE CORE. FEELS VIBRATION.',
+  '',
+  'MELEE: SPACE ON AN ADJACENT ENTITY OPENS TURN-BASED COMBAT.',
+  '  AP SYSTEM: SPEND ACTION POINTS. CRIPPLE LIMBS. THROW WEAPONS.',
+  '',
+  'CONTROLS:',
+  '  WASD / ARROWS ... MOVE            SPACE ... STRIKE',
+  '  E ............... INTERACT        K ....... KICK DOOR',
+  '  F ............... LANTERN         1-5 ..... USE ITEM',
+  '  Q / U ........... DROP LANTERN / PIPE      X ... MUTE',
+  '',
+  '  IN A CRISIS: A SHORT WINDOW TO CHOOSE [H] OR [B]. THE TRIAL',
+  '  THEN GETS ITS OWN FRESH WINDOW — LENGTH SET BY DIFFICULTY.',
+  '    [H] HEART — INSTINCT. FAST. CHAOTIC. TYPE THE SEQUENCE.',
+  '    [B] BRAIN — PRECISION. COLD. SOLVE THE EQUATION.',
+  '    TIMEOUT OR ERROR = UNMITIGATED DAMAGE TO A RANDOM LIMB.',
+  '',
+  'FIND ELEVATORS (>) TO DESCEND. FIND THE RESONANCE CORE (?) LAST.',
+  'READ TERMINALS (T). SOME ANSWERS CHANGE THE ENDING.',
+  '',
+  '>> PRESS ANY KEY TO SYNC <<',
+];
+function startBoot(){
+  gameState='BOOT';
+  bootReady=false;
+  elBoot.style.display='block';
+  const full=BOOT_LINES.join('\n');
+  let i=0;
+  elBootTxt.textContent='';
+  if(bootTimer) clearInterval(bootTimer);
+  bootTimer=setInterval(()=>{
+    i+=3;
+    elBootTxt.textContent=full.slice(0,i);
+    if(i>=full.length){
+      clearInterval(bootTimer);
+      bootTimer=null;
+      bootReady=true;
+    }
+  },14);
+}
+function beginGame(){
+  elBoot.style.display='none';
+  elFacility.textContent='ONYX-7 DEEP RESEARCH FACILITY // OUTER ENTRANCE \u00b7 '+DIFF.shortLabel;
+  gameState='PLAY';
+  log('Neural link established. ONYX-7 — OUTER ENTRANCE.','sys');
+  log('The snow behind you has no tracks. The gate is already open.','atm');
+  log('The Pulse is under the facility: 5.82 Hz, patient as stone.','atm');
+  log('Find an elevator (>) and descend. Read terminals (T). Nothing here is accidental.','sys');
+  emitNoise(player.x,player.y,26,2);
+  computeVis(); renderAll();
+}
+
+/* ---------------- INIT ---------------- */
+function init(){
+  tiles=new Uint8Array(MW*MH);
+  seenA=new Uint8Array(MW*MH);
+  vis=new Uint8Array(MW*MH);
+  field=new Float32Array(MW*MH);
+  turn=0; cognition=0; fear=0; pain=0; crisisImmunity=0; floor=0; archives=0; relaysPowered=0; relayGoal=2;
+  queue=[]; crisis=null; logs=[];
+  inventory = []; 
+  invAdd('med', DIFF.meds);
+  muted=false; crawlPhase=false;
+  statCrises=0; statKills=0;
+  weapon=null;
+  lantern={carried:true,lit:true,fuel:100,gx:-1,gy:-1,gseen:false};
+  player={x:0,y:0};
+  enemies=[]; items=[]; anomalies=[]; sources=[];
+  initLimbs();
+  genMap();
+  populate();
+  computeVis();
+  renderAll();
+}
+
+/* ---------------- INPUT ---------------- */
+function onKey(ev){
+  unlockAudio();
+  const k=ev.key;
+  if(gameState==='SPLASH'){ leaveSplash(); return; }
+  if(gameState==='MENU'){
+    if(k==='ArrowUp'||k==='w'||k==='W'){ menuIdx=(menuIdx+MENU_ITEMS.length-1)%MENU_ITEMS.length; renderMenu(); return; }
+    if(k==='ArrowDown'||k==='s'||k==='S'){ menuIdx=(menuIdx+1)%MENU_ITEMS.length; renderMenu(); return; }
+    if(k==='Enter'||k===' '){ selectMenu(); return; }
+    if(/^[1-6]$/.test(k)){ menuIdx=parseInt(k,10)-1; selectMenu(); return; }
+    return;
+  }
+  if(gameState==='DIFF'){
+    if(k==='Escape'||k==='Backspace'||k==='q'||k==='Q'){ showMenu(); return; }
+    if(k==='ArrowUp'||k==='w'||k==='W'){ diffIdx=(diffIdx+DIFF_ORDER.length-1)%DIFF_ORDER.length; renderDiff(); return; }
+    if(k==='ArrowDown'||k==='s'||k==='S'){ diffIdx=(diffIdx+1)%DIFF_ORDER.length; renderDiff(); return; }
+    if(k==='Enter'||k===' '){ selectDiff(); return; }
+    if(/^[1-3]$/.test(k)){ diffIdx=parseInt(k,10)-1; selectDiff(); return; }
+    return;
+  }
+  if(gameState==='LORE'){
+    if(k==='Escape'||k==='Backspace'||k==='q'||k==='Q'){ showMenu(); return; }
+    if(k==='ArrowDown'||k==='s'||k==='S'){ loreOffset++; renderLore(); return; }
+    if(k==='ArrowUp'||k==='w'||k==='W'){ loreOffset--; renderLore(); return; }
+    if(k==='ArrowRight'||k==='d'||k==='D'){ loreIdx=(loreIdx+1)%LORE_PAGES.length; loreOffset=0; renderLore(); return; }
+    if(k==='ArrowLeft'||k==='a'||k==='A'){ loreIdx=(loreIdx+LORE_PAGES.length-1)%LORE_PAGES.length; loreOffset=0; renderLore(); return; }
+    return;
+  }
+  if(gameState==='BOOT'){
+    if(!bootReady){
+      if(bootTimer){ clearInterval(bootTimer); bootTimer=null; }
+      elBootTxt.textContent=BOOT_LINES.join('\n');
+      bootReady=true;
+      return;
+    }
+    beginGame();
+    return;
+  }
+  if(gameState==='DEAD'||gameState==='WIN'){
+    if(k==='r'||k==='R'){ showMenu(); }
+    return;
+  }
+  if(gameState==='CRISIS'){
+    handleCrisisKey(ev);
+    if(ev.preventDefault) ev.preventDefault();
+    return;
+  }
+  if(gameState==='COMBAT'){
+    if(ev.preventDefault) ev.preventDefault();
+    combatKey(k);
+    return;
+  }
+  if(gameState!=='PLAY') return;
+
+  const mv={
+    'ArrowUp':[0,-1],'w':[0,-1],'W':[0,-1],
+    'ArrowDown':[0,1],'s':[0,1],'S':[0,1],
+    'ArrowLeft':[-1,0],'a':[-1,0],'A':[-1,0],
+    'ArrowRight':[1,0],'d':[1,0],'D':[1,0],
+  };
+  if(mv[k]){ if(ev.preventDefault) ev.preventDefault(); tryMove(mv[k][0],mv[k][1]); return; }
+  if(k===' '){ if(ev.preventDefault) ev.preventDefault(); attack(); return; }
+  if(k==='e'||k==='E'){ interact(); return; }
+  if(k==='k'||k==='K'){ kick(); return; }
+  if(k==='f'||k==='F'){ toggleLantern(); return; }
+  if(k==='m'||k==='M'){ 
+    const idx = inventory.findIndex(i => i.type === 'med');
+    if (idx !== -1) useItem(idx); 
+    else log('No medkits left.','dim'); 
+    return; 
+  }
+  if(/^[1-5]$/.test(k)){
+    if(ev.preventDefault) ev.preventDefault();
+    const slot = parseInt(k, 10) - 1;
+    useItem(slot);
+    return;
+  }
+  if(k==='q'||k==='Q'){ dropLantern(false); endTurn(); return; }
+  if(k==='u'||k==='U'){ dropPipe(); return; }
+  if(k==='x'||k==='X'){ muted=!muted; log('Audio telemetry '+(muted?'MUTED':'ON')+'.','sys'); renderAll(); return; }
+}
+window.addEventListener('keydown',onKey);
+window.addEventListener('click',()=>{ unlockAudio(); if(gameState==='SPLASH') leaveSplash(); });
+
+/* ---------------- MAIN LOOP ---------------- */
+function frame(ts){
+  const dt=Math.min(100,ts-lastFrame);
+  lastFrame=ts;
+  if(gameState==='CRISIS'&&crisis){
+    const rem=crisis.deadline-performance.now();
+    elCFill.style.width=clamp(rem/crisis.total*100,0,100)+'%';
+    if(rem<=0) resolveCrisis(false,'timeout');
+  }
+  if((gameState==='PLAY'||gameState==='CRISIS'||gameState==='COMBAT')&&AC&&!muted){
+    hbAcc+=dt;
+    const p=calcPulse();
+    const period=1000/Math.max(0.5,p);
+    if(hbAcc>=period){
+      hbAcc=0;
+      if(p>1.45) sfx.thump(0.04+p*0.012);
+    }
+  }
+  requestAnimationFrame(frame);
+}
+
+requestAnimationFrame(frame);
+
+})();
+</script>
+</body>
+</html>
